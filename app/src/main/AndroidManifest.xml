@@ -16,6 +16,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AraToons">
 
+        <!-- Required by Chromium (in-process WebView) for GMS version lookup.
+             Must match the play-services-basement version bundled with the
+             system WebView (18.1.0 -> 12451000 for WebView 137). -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="12451000" />
+
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize"

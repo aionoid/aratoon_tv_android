@@ -25,9 +25,10 @@ import java.util.Locale
  * groups, so master.m3u8 URLs are returned as-is and the player UI offers
  * audio track switching.
  */
-class StreamResolver(private val http: OkHttpClient) {
+class StreamResolver(private val context: Context, private val http: OkHttpClient) {
 
     private val hwBase = "https://v2.hyperwatching.com"
+    private val webExtractor = WebViewStreamExtractor()
 
     private val browserHeaders: Map<String, String> = mapOf(
         "User-Agent" to StardimaApi.USER_AGENT,
@@ -48,6 +49,7 @@ class StreamResolver(private val http: OkHttpClient) {
 
     suspend fun getEmbedUrl(pageUrl: String): String? = withContext(Dispatchers.IO) {
         var url = pageUrl
+        if (!url.startsWith("http")) url = StardimaApi.BASE_URL + url
         if ("hyperwatching" in url) return@withContext url
 
         var starHtml = fetchText(url, mapOf("Referer" to StardimaApi.BASE_URL + "/"))
@@ -160,6 +162,7 @@ class StreamResolver(private val http: OkHttpClient) {
                 servers = matched
             }
             val ordered = servers.sortedBy { priorityOrder[it.name] ?: 99 }
+            val triedWatchUrls = ArrayList<String>()
 
             for (server in ordered) {
                 // Step 3: server URL API
@@ -171,6 +174,7 @@ class StreamResolver(private val http: OkHttpClient) {
                 }
                 val watchUrl = apiData.optString("watch_url", "")
                 if (watchUrl.isEmpty()) continue
+                triedWatchUrls.add(watchUrl)
 
                 val playerHtml = try {
                     fetchText(watchUrl, mapOf("Referer" to embedUrl))
@@ -292,6 +296,14 @@ class StreamResolver(private val http: OkHttpClient) {
                             }
                         }
                     }
+                }
+            }
+
+            // --- WebView fallback: let the server page's own JS find the stream ---
+            for (wu in triedWatchUrls.take(3)) {
+                val stream = webExtractor.extract(context, wu, embedUrl)
+                if (stream != null) {
+                    return@withContext StreamResult(stream, headers(mapOf("Referer" to origin(wu))))
                 }
             }
             null

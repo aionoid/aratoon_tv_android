@@ -142,6 +142,15 @@ fun PlayerScreen(url: String, title: String, poster: String) {
                     Player.STATE_READY -> {
                         buffering = false
                         refreshAudioTracks()
+                        // Track selection diagnostics (audio-only playback hunt)
+                        val sb = StringBuilder()
+                        for (g in player.currentTracks.groups) {
+                            sb.append("[type=").append(g.type)
+                                .append(" selected=").append(g.isSelected())
+                                .append(" tracks=").append(g.length)
+                                .append("]")
+                        }
+                        android.util.Log.d("PlayerScreen", "READY: $sb")
                     }
                     Player.STATE_BUFFERING -> buffering = true
                     Player.STATE_ENDED -> isPlaying = false
@@ -248,7 +257,12 @@ fun PlayerScreen(url: String, title: String, poster: String) {
 
         AndroidView(
             factory = { ctx ->
-                PlayerView(ctx).apply {
+                // Inflated from XML so app:surface_type="texture_view" applies
+                // (no public setter in media3 1.4.1). TextureView composes inside
+                // the app window; SurfaceView's hole-punch rendering goes black
+                // on Waydroid (containerized Android) even though the video
+                // decodes fine.
+                (android.view.LayoutInflater.from(ctx).inflate(R.layout.player_view, null) as androidx.media3.ui.PlayerView).apply {
                     this.player = player
                     useController = false
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT

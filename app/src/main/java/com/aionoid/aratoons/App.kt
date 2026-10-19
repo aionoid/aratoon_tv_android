@@ -21,7 +21,7 @@ class App : Application() {
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
-        resolver = StreamResolver(http)
+        resolver = StreamResolver(this, http)
     }
 
     companion object {

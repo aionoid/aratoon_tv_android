@@ -3,7 +3,7 @@ package com.aionoid.aratoons.data
 import android.content.Context
 import android.graphics.Color
 import android.os.Handler
-import android.os.HandlerThread
+import android.os.Looper
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
@@ -23,62 +23,65 @@ import kotlin.coroutines.resume
  * JavaScript requests. This sidesteps per-site eval/obfuscation: whatever
  * the page does to find its stream, the network request lands in
  * [WebViewClient.shouldInterceptRequest].
+ *
+ * The WebView must be created and destroyed on the main (UI) thread, so all
+ * WebView work is posted to the main looper; the suspend call itself just
+ * waits for a callback.
+ *
+ * Timing: on slow devices (e.g. Waydroid right after boot) the page's HTML +
+ * JS can take well over 10s to initialize, so the deadline is generous and
+ * the play-button probe is retried periodically until capture or deadline.
  */
 class WebViewStreamExtractor {
 
-    private val tag = "WVExtract"
+    private val logTag = "WVExtract"
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     /**
      * Load [pageUrl] and capture the media URL its player requests.
      * @param referer Referer header sent with the main page request.
-     * @return captured media URL, or null if nothing was captured within [timeoutMs].
+     * @param timeoutMs overall deadline (page load + stream setup).
+     * @return captured media URL, or null if nothing was captured in time.
      */
     suspend fun extract(
         context: Context,
         pageUrl: String,
         referer: String,
-        timeoutMs: Long = 12_000
+        timeoutMs: Long = 35_000
     ): String? = suspendCancellableCoroutine { cont ->
-        val thread = HandlerThread("wv-extract").apply { start() }
-        val handler = Handler(thread.looper)
         var webView: WebView? = null
         var done = false
         var captured: String? = null
-        var probed = 0
         val appCtx = context.applicationContext
 
         fun finish(result: String?) {
             if (done) return
             done = true
-            Log.d(tag, "finish: $result (page=$pageUrl)")
-            handler.post {
+            Log.d(logTag, "finish: $result (page=$pageUrl)")
+            mainHandler.post {
                 runCatching { webView?.destroy() }
-                thread.quitSafely()
                 if (cont.isActive) cont.resume(result)
             }
         }
 
         fun probe() {
+            if (done) return
             val wv = webView ?: return
-            probed++
             runCatching {
                 wv.evaluateJavascript(JS_PROBE) { value ->
+                    if (done) return@evaluateJavascript
                     val v = decodeJs(value)
                     if (captured == null && v.isNotEmpty()) {
                         captured = v
-                        Log.d(tag, "probe captured: $v")
+                        Log.d(logTag, "probe captured: $v")
                     }
-                    if (captured != null) {
-                        finish(captured)
-                    } else if (probed >= 3) {
-                        finish(null)
-                    }
-                    // otherwise keep waiting for an intercepted request or timeout
+                    if (captured != null) finish(captured)
+                    // otherwise keep waiting for an intercepted request or deadline
                 }
             }.onFailure { finish(captured) }
         }
 
-        handler.post {
+        mainHandler.post {
             webView = WebView(appCtx).apply {
                 setBackgroundColor(Color.BLACK)
                 settings.javaScriptEnabled = true
@@ -88,7 +91,7 @@ class WebViewStreamExtractor {
                 settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 setWebChromeClient(object : WebChromeClient() {
                     override fun onConsoleMessage(cm: ConsoleMessage): Boolean {
-                        Log.d(tag, "console: ${cm.message()}")
+                        Log.d(logTag, "console: ${cm.message()}")
                         return true
                     }
                 })
@@ -101,16 +104,17 @@ class WebViewStreamExtractor {
                         val low = u.lowercase()
                         if (captured == null && (low.contains(".m3u8") || low.contains(".mp4"))) {
                             captured = u
-                            Log.d(tag, "intercept captured: $u")
-                            handler.postDelayed({ finish(captured) }, 400)
+                            Log.d(logTag, "intercept captured: $u")
+                            // Brief pause so the player's own request settles.
+                            mainHandler.postDelayed({ finish(captured) }, 400)
                         }
                         return null
                     }
 
                     override fun onPageFinished(view: WebView, url: String) {
-                        // Give the player JS time to initialize, then click play + probe.
-                        handler.postDelayed({ probe() }, 1500)
-                        handler.postDelayed({ probe() }, 4500)
+                        Log.d(logTag, "page finished: $url")
+                        // Player JS may need a moment before play can be clicked.
+                        mainHandler.postDelayed({ probe() }, 1500)
                     }
 
                     override fun onReceivedError(
@@ -119,18 +123,23 @@ class WebViewStreamExtractor {
                         description: String?,
                         failingUrl: String?
                     ) {
-                        Log.d(tag, "error: $description at $failingUrl")
-                        handler.postDelayed({ probe() }, 800)
+                        Log.d(logTag, "error: $description at $failingUrl")
+                        // Subframe errors (ads etc.) are common; probe anyway.
+                        mainHandler.postDelayed({ probe() }, 1000)
                     }
                 })
                 loadUrl(pageUrl, mapOf("Referer" to referer))
             }
         }
-        handler.postDelayed({ finish(captured) }, timeoutMs)
+        // Periodic probes: the page's stream-setup JS may run long after load
+        // (or never, if bot detection blocks it). Keep trying until the deadline.
+        for (delay in longArrayOf(5_000, 10_000, 15_000, 20_000, 25_000, 30_000)) {
+            mainHandler.postDelayed({ probe() }, delay)
+        }
+        mainHandler.postDelayed({ finish(captured) }, timeoutMs)
         cont.invokeOnCancellation {
-            handler.post {
+            mainHandler.post {
                 runCatching { webView?.destroy() }
-                thread.quitSafely()
             }
         }
     }

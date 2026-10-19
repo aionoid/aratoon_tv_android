@@ -102,15 +102,17 @@ object EvalDecoder {
      * Mixdrop: extract the direct MP4 URL from the embed page.
      */
     fun extractMixdropUrl(html: String): String? {
-        val decoded = decodeMixdrop(html) ?: return null
-        val m = Regex("wurl[\"']?\\s*=\\s*\"([^\"]+\\.mp4[^\"]*)\"").find(decoded)
-            ?: Regex("furl[\"']?\\s*=\\s*\"([^\"]+\\.mp4[^\"]*)\"").find(decoded)
-            ?: return null
-        var mp4 = m.groupValues[1]
-        if (!mp4.startsWith("http")) {
-            mp4 = if (mp4.startsWith("//")) "https:$mp4" else "https://$mp4"
-        }
-        return mp4
+      val decoded = decodeMixdrop(html) ?: return null
+      // Current pages store the file in MDCore.N assignments instead of wurl/furl.
+      val m = Regex("wurl[\"']?\\s*=\\s*\"([^\"]+\\.mp4[^\"]*)\"").find(decoded)
+          ?: Regex("furl[\"']?\\s*=\\s*\"([^\"]+\\.mp4[^\"]*)\"").find(decoded)
+          ?: Regex("MDCore\\.\\d+=\"([^\"]+\\.mp4[^\"]*)\"").find(decoded)
+          ?: return null
+      var mp4 = m.groupValues[1]
+      if (!mp4.startsWith("http")) {
+          mp4 = if (mp4.startsWith("//")) "https:$mp4" else "https://$mp4"
+      }
+      return mp4
     }
 
     /**
