@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">أرا تونز</string>
+
+    <!-- Home -->
+    <string name="home">الرئيسية</string>
+    <string name="movies">أفلام</string>
+    <string name="series">مسلسلات</string>
+    <string name="latest">الأحدث</string>
+    <string name="search">بحث</string>
+    <string name="settings">الإعدادات</string>
+
+    <!-- Latest rows -->
+    <string name="latest_releases">أحدث الإصدارات</string>
+    <string name="new_episodes">حلقات جديدة</string>
+    <string name="new_movies">أفلام جديدة</string>
+    <string name="new_series">مسلسلات جديدة</string>
+
+    <!-- Catalog -->
+    <string name="all">الكل</string>
+    <string name="subtitled">مترجم</string>
+    <string name="dubbed">مدبلج</string>
+    <string name="episodes">الحلقات</string>
+    <string name="loading">جارٍ التحميل…</string>
+    <string name="no_results">لا توجد نتائج</string>
+    <string name="error_generic">حدث خطأ ما</string>
+    <string name="error_network">تحقق من اتصال الإنترنت</string>
+    <string name="retry">إعادة المحاولة</string>
+
+    <!-- Search -->
+    <string name="search_hint">ابحث عن أفلام ومسلسلات…</string>
+    <string name="searching">جارٍ البحث…</string>
+
+    <!-- Series / episodes -->
+    <string name="season">الموسم</string>
+    <string name="episode">الحلقة</string>
+    <string name="play">تشغيل</string>
+
+    <!-- Player -->
+    <string name="select_server">اختر الخادم</string>
+    <string name="server_ready">جاهز</string>
+    <string name="server_processing">قيد المعالجة</string>
+    <string name="resolving_stream">جارٍ البحث عن البث…</string>
+    <string name="error_no_stream">لم يتم العثور على بث قابل للتشغيل</string>
+    <string name="error_no_servers">لا يوجد خوادم متاحة</string>
+    <string name="audio">الصوت</string>
+
+    <!-- Recently watched -->
+    <string name="recently_watched">شُاهد مؤخراً</string>
+    <string name="continue_watching">أكمل المشاهدة</string>
+    <string name="remove">حذف</string>
+    <string name="removed">حُذف من القائمة</string>
+
+    <!-- Settings -->
+    <string name="language">لغة الواجهة</string>
+    <string name="language_system">لغة النظام</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">العربية</string>
+    <string name="about">حول التطبيق</string>
+    <string name="about_text">أفلام ومسلسلات من موقع stardima.com</string>
+    <string name="version">الإصدار</string>
+</resources>
