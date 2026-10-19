@@ -173,7 +173,7 @@ fun HomeScreen(navController: NavHostController) {
                             posterUrl = entry.poster,
                             onClick = {
                                 navController.navigate(
-                                    Routes.player(entry.url, entry.title, entry.poster)
+                                    Routes.servers(entry.url, entry.title, entry.poster)
                                 )
                             }
                         )
@@ -217,7 +217,7 @@ private fun onVideoClick(item: VideoItem, navController: NavHostController) {
         val slug = item.url.substringAfterLast("/")
         navController.navigate(Routes.series(slug))
     } else {
-        navController.navigate(Routes.player(item.url, item.title, item.posterUrl))
+        navController.navigate(Routes.servers(item.url, item.title, item.posterUrl))
     }
 }
 

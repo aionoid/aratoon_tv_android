@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-10-19
+
+### Added
+
+- Server selection screen between catalog and player: pick which playback
+  server to use (servers differ in speed, availability, languages and
+  quality)
+- Single-server videos skip the list and play directly
+- "Play (auto)" fallback when the server list cannot be loaded
+
+### Fixed
+
+- Selected server was ignored: navigation 2.8 stores optional route
+  parameters under a key with the `?` suffix (`server?`), so the player
+  always fell back to auto mode
+
 ## [0.2.0] - 2026-10-19
 
 ### Added

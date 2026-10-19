@@ -38,6 +38,9 @@
 
     <!-- Player -->
     <string name="select_server">Select server</string>
+    <string name="select_server_hint">Choose a server — speed, languages and quality can differ</string>
+    <string name="server_id">Server #%1$d</string>
+    <string name="play_auto">Play (auto)</string>
     <string name="server_ready">ready</string>
     <string name="server_processing">processing</string>
     <string name="resolving_stream">Finding stream…</string>

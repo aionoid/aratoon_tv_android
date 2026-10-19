@@ -72,7 +72,7 @@ import kotlinx.coroutines.launch
  * M3 controls (play/pause, seek, audio track selection, server fallback).
  */
 @Composable
-fun PlayerScreen(url: String, title: String, poster: String) {
+fun PlayerScreen(url: String, title: String, poster: String, server: String? = null) {
     val app = App.instance
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -82,7 +82,8 @@ fun PlayerScreen(url: String, title: String, poster: String) {
     var stream by remember { mutableStateOf<StreamResult?>(null) }
     var servers by remember { mutableStateOf<List<ServerInfo>?>(null) }
     var showServerDialog by remember { mutableStateOf(false) }
-    var retryServer by remember { mutableStateOf<String?>(null) }
+    // Pre-selected server from the server-selection screen (null = auto).
+    var retryServer by remember { mutableStateOf<String?>(server) }
     var showAudioDialog by remember { mutableStateOf(false) }
     var audioTracks by remember { mutableStateOf<List<String>?>(null) }
     var selectedAudio by remember { mutableStateOf(0) }

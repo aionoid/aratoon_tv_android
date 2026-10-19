@@ -222,7 +222,7 @@ fun SeriesScreen(
             items(eps, key = { it.id }) { ep ->
                 val onEpClick: () -> Unit = {
                     navController.navigate(
-                        Routes.player(
+                        Routes.servers(
                             "/play/${ep.id}",
                             ep.title.ifEmpty { "${infoData.title} — ${ep.title}" },
                             infoData.poster

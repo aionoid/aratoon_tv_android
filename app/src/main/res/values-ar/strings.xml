@@ -38,6 +38,9 @@
 
     <!-- Player -->
     <string name="select_server">اختر الخادم</string>
+    <string name="select_server_hint">اختر خادمًا — السرعة واللغات والجودة قد تختلف</string>
+    <string name="server_id">الخادم رقم %1$d</string>
+    <string name="play_auto">تشغيل (تلقائي)</string>
     <string name="server_ready">جاهز</string>
     <string name="server_processing">قيد المعالجة</string>
     <string name="resolving_stream">جارٍ البحث عن البث…</string>
