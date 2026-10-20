@@ -1,4 +1,5 @@
 *.log
+.env
 app/build/
 .gradle/
 local.properties

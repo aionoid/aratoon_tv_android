@@ -12,7 +12,8 @@ data class VideoItem(
     val posterUrl: String,
     val isSeries: Boolean,
     val year: String,
-    val description: String
+    val description: String,
+    val quality: String = ""
 )
 
 data class Episode(

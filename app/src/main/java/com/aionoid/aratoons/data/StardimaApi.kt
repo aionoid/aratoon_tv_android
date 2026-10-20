@@ -47,7 +47,8 @@ object StardimaApi {
             posterUrl = resolvePoster(v.optString("poster_url", "")),
             isSeries = v.optBoolean("is_series", false),
             year = v.optString("year", ""),
-            description = v.optString("description", "")
+            description = v.optString("description", ""),
+            quality = v.optString("video_quality", "")
         )
     }
 
@@ -268,6 +269,55 @@ object StardimaApi {
                 extractItems(section("movies")),
                 extractItems(section("series"))
             )
+        }
+
+    /**
+     * "الرائج" (Popular) carousel from the HOME PAGE — server-rendered
+     * `embla__slide` blocks: poster img + link overlay (h3 title,
+     * description, /tvshow|/movie URL). No AJAX behind it; the id suffix
+     * (e.g. embla-alrayg-19) is just a section id.
+     */
+    suspend fun popular(http: OkHttpClient): List<VideoItem> =
+        withContext(Dispatchers.IO) {
+            val html = fetchText(http, BASE_URL + "/")
+            val h2 = html.indexOf("الرائج</h2>")
+            if (h2 < 0) return@withContext emptyList()
+            val start = html.lastIndexOf("<div class=\"w-full relative group/carousel\">", h2)
+            val end = html.indexOf("w-full relative group/carousel", h2)
+            val block = if (start >= 0 && end > h2) {
+                html.substring(start, end)
+            } else {
+                html.substring(h2, (h2 + 30000).coerceAtMost(html.length))
+            }
+
+            val items = ArrayList<VideoItem>()
+            val seen = HashSet<String>()
+            for (slide in block.split(Regex("<div\\s+class=\"embla__slide"))) {
+                val title = Regex("<h3[^>]*>\\s*([^<]+?)\\s*</h3>").find(slide) ?: continue
+                val link = Regex(
+                    "<a[^>]+href=\"((?:https://)?(?:www\\.)?stardima\\.com/(?:tvshow|movie)/[^\"]+)\""
+                ).find(slide) ?: continue
+                val poster = Regex("<img[^>]+src=\"([^\"]+)\"").find(slide)
+                    ?.groupValues?.get(1) ?: ""
+                val desc = Regex("<p[^>]*text-gray-400[^>]*>([\\s\\S]*?)</p>").find(slide)
+                var url = link.groupValues[1]
+                if (!url.startsWith("http")) url = "https://$url"
+                if (!seen.add(url)) continue
+                items.add(
+                    VideoItem(
+                        id = 0,
+                        title = unescapeHtml(title.groupValues[1].trim()),
+                        url = url.removePrefix(BASE_URL),
+                        posterUrl = resolveHtmlPoster(poster),
+                        isSeries = "/tvshow/" in url,
+                        year = "",
+                        description = Regex("\\s+").replace(
+                            unescapeHtml(desc?.groupValues?.get(1).orEmpty().trim()), " "
+                        )
+                    )
+                )
+            }
+            items
         }
 
     /** Scrape og:title / og:image from a video page (used for recently-watched). */

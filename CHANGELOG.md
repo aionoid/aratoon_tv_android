@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-20
+
+### Added
+
+- Streaming-app home screen: fixed-height hero banner (backdrop + dark
+  gradient + title/description + gold "Watch Now" button) with a "Popular"
+  poster rail, above episodes / recently watched content rails with
+  chevron scroll buttons. The hero and all rails are stacked in a single
+  vertical scroll, so nothing is clipped or overlaps on short screens
+  (e.g. phone landscape)
+- Tapping a "Popular" poster re-selects the hero (Netflix-style): the
+  hero backdrop, title, description, metadata and Watch Now target all
+  follow the selection, and the selected poster is outlined in gold
+- Left sidebar navigation (Movies / Series / Latest / Search / Recently
+  watched / Settings) with a two-tone AraToons logo, replacing the top
+  menu-card row
+- Gold/amber accent theme (Material 3) across the app
+- Quality (e.g. "1080p") now parsed from the API and shown on the hero
+  banner
+- Redesigned poster cards (elevated, rounded, slightly-portrait): cropped
+  image on top with a dark gradient scrim fading into a text panel below
+  that shows the title with the year on the same line, a short
+  description and the quality; thin light border (gold when
+  selected/focused) and a soft drop shadow
+
 ## [0.4.0] - 2026-10-20
 
 ### Added

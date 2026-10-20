@@ -28,7 +28,8 @@
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize"
             android:exported="true"
             android:screenOrientation="landscape"
-            android:theme="@style/Theme.AraToons">
+            android:theme="@style/Theme.AraToons"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />

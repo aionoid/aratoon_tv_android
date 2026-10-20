@@ -8,7 +8,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,6 +46,7 @@ import androidx.tv.material3.Card
 import com.aionoid.aratoons.BuildConfig
 import com.aionoid.aratoons.MainActivity
 import com.aionoid.aratoons.R
+import com.aionoid.aratoons.ui.systemBarsContentPadding
 
 data class LanguageOption(val label: String, val value: String)
 
@@ -69,7 +69,7 @@ fun SettingsScreen() {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 32.dp)
+        contentPadding = systemBarsContentPadding(start = 24.dp, top = 12.dp, end = 24.dp, bottom = 32.dp)
     ) {
         item {
             Text(

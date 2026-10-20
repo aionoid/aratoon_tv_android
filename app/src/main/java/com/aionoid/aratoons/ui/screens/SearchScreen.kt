@@ -1,7 +1,6 @@
 package com.aionoid.aratoons.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,9 +23,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -38,12 +39,14 @@ import com.aionoid.aratoons.ui.ErrorBox
 import com.aionoid.aratoons.ui.LoadingBox
 import com.aionoid.aratoons.ui.PosterCard
 import com.aionoid.aratoons.ui.Routes
+import com.aionoid.aratoons.ui.systemBarsContentPadding
 import kotlinx.coroutines.launch
 
 /**
  * Search screen: text field + results grid with explicit pagination
  * (previous/next + page picker — same pattern as the catalogs).
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SearchScreen(navController: NavHostController) {
     val app = App.instance
@@ -93,11 +96,23 @@ fun SearchScreen(navController: NavHostController) {
 
     val list = items ?: emptyList()
 
+    // Leanback: start focus on the search field
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
     LazyVerticalGrid(
         state = gridState,
         columns = GridCells.Adaptive(minSize = 160.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        modifier = Modifier.fillMaxSize()
+        contentPadding = systemBarsContentPadding(
+            start = 16.dp,
+            top = 8.dp,
+            end = 16.dp,
+            bottom = 16.dp
+        ),
+        modifier = Modifier
+            .fillMaxSize()
+            .focusRestorer()
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(
@@ -189,17 +204,21 @@ fun SearchScreen(navController: NavHostController) {
         }
 
         items(list, key = { it.url + it.title + it.id }) { item ->
-            PosterCard(item = item, onClick = {
-                if (item.isSeries) {
-                    navController.navigate(
-                        Routes.series(item.url.substringAfterLast("/"))
-                    )
-                } else {
-                    navController.navigate(
-                        Routes.servers(item.url, item.title, item.posterUrl)
-                    )
-                }
-            })
+            PosterCard(
+                item = item,
+                onClick = {
+                    if (item.isSeries) {
+                        navController.navigate(
+                            Routes.series(item.url.substringAfterLast("/"))
+                        )
+                    } else {
+                        navController.navigate(
+                            Routes.servers(item.url, item.title, item.posterUrl)
+                        )
+                    }
+                },
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp)
+            )
         }
     }
 }

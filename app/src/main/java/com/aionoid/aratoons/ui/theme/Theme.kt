@@ -10,20 +10,20 @@ import androidx.tv.material3.MaterialTheme as TvMaterialTheme
 import androidx.tv.material3.darkColorScheme as tvDarkColorScheme
 
 /**
- * Brand colors (stardima indigo-blue on a dark background).
+ * Brand colors (gold/amber accent on a dark background — streaming-app look).
  */
-val Primary = Color(0xFF8CB6FF)
-val OnPrimary = Color(0xFF001938)
-val PrimaryContainer = Color(0xFF123666)
-val OnPrimaryContainer = Color(0xFFD5E3FF)
-val Secondary = Color(0xFFC2D7F7)
-val OnSecondary = Color(0xFF0A3055)
-val SecondaryContainer = Color(0xFF28496D)
-val OnSecondaryContainer = Color(0xFFD5E3FF)
-val Tertiary = Color(0xFFB9D5FF)
-val OnTertiary = Color(0xFF042E55)
-val TertiaryContainer = Color(0xFF024687)
-val OnTertiaryContainer = Color(0xFFD5E3FF)
+val Primary = Color(0xFFFFC107)
+val OnPrimary = Color(0xFF212121)
+val PrimaryContainer = Color(0xFF3A2E00)
+val OnPrimaryContainer = Color(0xFFFFD75E)
+val Secondary = Color(0xFFFFD75E)
+val OnSecondary = Color(0xFF3A2E00)
+val SecondaryContainer = Color(0xFF5A4400)
+val OnSecondaryContainer = Color(0xFFFFD75E)
+val Tertiary = Color(0xFFFFD75E)
+val OnTertiary = Color(0xFF3A2E00)
+val TertiaryContainer = Color(0xFF5A4400)
+val OnTertiaryContainer = Color(0xFFFFD75E)
 val Background = Color(0xFF0F1419)
 val OnBackground = Color(0xFFE2E2E2)
 val Surface = Color(0xFF1A1C1E)

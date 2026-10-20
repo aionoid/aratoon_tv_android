@@ -5,7 +5,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -46,6 +45,7 @@ import com.aionoid.aratoons.data.StardimaApi
 import com.aionoid.aratoons.ui.ErrorBox
 import com.aionoid.aratoons.ui.LoadingBox
 import com.aionoid.aratoons.ui.Routes
+import com.aionoid.aratoons.ui.systemBarsContentPadding
 
 /**
  * Series detail: poster + metadata, season tabs, episode list.
@@ -106,7 +106,7 @@ fun SeriesScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 24.dp)
+        contentPadding = systemBarsContentPadding(bottom = 24.dp)
     ) {
         // Header: poster + title + description
         item {
