@@ -27,6 +27,7 @@
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize"
             android:exported="true"
+            android:screenOrientation="landscape"
             android:theme="@style/Theme.AraToons">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-10-20
+
+### Added
+
+- Explicit pagination for catalogs (movies/series) and search: Previous /
+  Next buttons plus a "Page X / Y" dropdown to jump to any page (the server
+  serves 15 items per page, e.g. 108 pages of movies)
+- Changing the language filter (All / Subtitled / Dubbed) returns to page 1
+- App now locks to landscape orientation (TV-first: phones match the TV
+  screen ratio and the full home navigation row is visible)
+
+### Fixed
+
+- Catalogs and search only ever showed the first 15 titles: the infinite
+  scroll never re-triggered on scroll (stable grid-state identity) and its
+  derived state captured the initial empty list
+
 ## [0.3.0] - 2026-10-19
 
 ### Added

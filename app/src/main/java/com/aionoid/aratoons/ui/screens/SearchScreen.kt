@@ -27,9 +27,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.aionoid.aratoons.App
+import com.aionoid.aratoons.R
 import com.aionoid.aratoons.data.StardimaApi
 import com.aionoid.aratoons.data.VideoItem
 import com.aionoid.aratoons.ui.ErrorBox
@@ -39,7 +41,8 @@ import com.aionoid.aratoons.ui.Routes
 import kotlinx.coroutines.launch
 
 /**
- * Search screen: text field + results grid with pagination.
+ * Search screen: text field + results grid with explicit pagination
+ * (previous/next + page picker — same pattern as the catalogs).
  */
 @Composable
 fun SearchScreen(navController: NavHostController) {
@@ -49,10 +52,9 @@ fun SearchScreen(navController: NavHostController) {
 
     var query by rememberSaveable { mutableStateOf("") }
     var searchedQuery by remember { mutableStateOf("") }
-    var items by remember { mutableStateOf<List<VideoItem>?>(null) }
-    var page by remember { mutableStateOf(1) }
+    var page by rememberSaveable { mutableStateOf(1) }
     var lastPage by remember { mutableStateOf(1) }
-    var loadingMore by remember { mutableStateOf(false) }
+    var items by remember { mutableStateOf<List<VideoItem>?>(null) }
     var searching by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
     var loadKey by remember { mutableStateOf(0) }
@@ -60,64 +62,36 @@ fun SearchScreen(navController: NavHostController) {
 
     fun doSearch() {
         val q = query.trim()
-        if (q.isEmpty() || searching) return
-        searching = true
-        items = null
-        error = false
-        page = 1
+        if (q.isEmpty()) return
         searchedQuery = q
-        scope.launch {
-            try {
-                val (list, lp) = StardimaApi.search(app.http, q, 1)
-                items = list
-                lastPage = lp
-            } catch (e: Exception) {
-                error = true
-            } finally {
-                searching = false
-            }
+        page = 1
+    }
+
+    LaunchedEffect(searchedQuery, page, loadKey) {
+        if (searchedQuery.isEmpty()) return@LaunchedEffect
+        searching = true
+        error = false
+        items = null
+        try {
+            val (list, lp) = StardimaApi.search(app.http, searchedQuery, page)
+            items = list
+            lastPage = lp
+        } catch (e: Exception) {
+            error = true
+        } finally {
+            searching = false
         }
     }
 
-    // Auto-search on Enter is handled by the button; also watch loadKey (retry)
-    LaunchedEffect(searchedQuery, loadKey) {
-        if (searchedQuery.isNotEmpty() && items == null && !searching && !error) {
-            doSearch()
+    fun goPage(n: Int) {
+        val clamped = n.coerceIn(1, lastPage)
+        if (clamped != page) {
+            page = clamped
+            scope.launch { gridState.scrollToItem(0) }
         }
     }
 
     val list = items ?: emptyList()
-
-    // Infinite scroll
-    LaunchedEffect(gridState, list.size) {
-        val visible = gridState.layoutInfo.visibleItemsInfo
-        if (visible.isNotEmpty() &&
-            visible.last().index >= list.size - 6 &&
-            page < lastPage &&
-            !loadingMore &&
-            list.isNotEmpty()
-        ) {
-            loadingMore = true
-            try {
-                val (more, _) = StardimaApi.search(app.http, searchedQuery, page + 1)
-                val merged = list.toMutableList()
-                val seen = merged.mapTo(mutableSetOf()) { it.url + it.title }
-                for (m in more) {
-                    val key = m.url + m.title
-                    if (key !in seen) {
-                        seen.add(key)
-                        merged.add(m)
-                    }
-                }
-                items = merged
-                page++
-            } catch (e: Exception) {
-                // ignore
-            } finally {
-                loadingMore = false
-            }
-        }
-    }
 
     LazyVerticalGrid(
         state = gridState,
@@ -137,11 +111,7 @@ fun SearchScreen(navController: NavHostController) {
                     value = query,
                     onValueChange = { query = it },
                     placeholder = {
-                        Text(
-                            androidx.compose.ui.res.stringResource(
-                                com.aionoid.aratoons.R.string.search_hint
-                            )
-                        )
+                        Text(stringResource(R.string.search_hint))
                     },
                     singleLine = true,
                     modifier = Modifier
@@ -152,17 +122,38 @@ fun SearchScreen(navController: NavHostController) {
                     onClick = { doSearch() },
                     enabled = !searching
                 ) {
-                Text(
-                    if (searching) {
-                        androidx.compose.ui.res.stringResource(
-                            com.aionoid.aratoons.R.string.searching
-                        )
-                    } else {
-                        androidx.compose.ui.res.stringResource(
-                            com.aionoid.aratoons.R.string.search
-                        )
+                    Text(
+                        if (searching) {
+                            stringResource(R.string.searching)
+                        } else {
+                            stringResource(R.string.search)
+                        }
+                    )
+                }
+            }
+        }
+
+        if (searchedQuery.isNotEmpty() && lastPage > 1) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(onClick = { goPage(page - 1) }, enabled = page > 1) {
+                        Text(stringResource(R.string.page_previous))
                     }
-                )
+                    PageDropdown(
+                        current = page,
+                        lastPage = lastPage,
+                        onPick = { goPage(it) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(onClick = { goPage(page + 1) }, enabled = page < lastPage) {
+                        Text(stringResource(R.string.page_next))
+                    }
                 }
             }
         }
@@ -174,9 +165,7 @@ fun SearchScreen(navController: NavHostController) {
         } else if (error && items == null) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 ErrorBox(
-                    message = androidx.compose.ui.res.stringResource(
-                        com.aionoid.aratoons.R.string.error_generic
-                    ),
+                    message = stringResource(R.string.error_generic),
                     onRetry = {
                         items = null
                         loadKey++
@@ -189,9 +178,7 @@ fun SearchScreen(navController: NavHostController) {
         } else if (searchedQuery.isNotEmpty() && list.isEmpty() && items != null) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    text = androidx.compose.ui.res.stringResource(
-                        com.aionoid.aratoons.R.string.no_results
-                    ),
+                    text = stringResource(R.string.no_results),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier
                         .fillMaxWidth()
