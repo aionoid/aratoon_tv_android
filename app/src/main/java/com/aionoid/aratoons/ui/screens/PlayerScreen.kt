@@ -42,9 +42,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -60,6 +62,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.aionoid.aratoons.App
 import com.aionoid.aratoons.R
+import com.aionoid.aratoons.ui.ActionPill
 import com.aionoid.aratoons.data.RecentlyWatched
 import com.aionoid.aratoons.data.ServerInfo
 import com.aionoid.aratoons.data.StreamResult
@@ -90,6 +93,7 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
     var controlsVisible by remember { mutableStateOf(true) }
     var buffering by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(true) }
+    var ended by remember { mutableStateOf(false) }
     var positionMs by remember { mutableStateOf(0L) }
     var durationMs by remember { mutableStateOf(0L) }
     var loadKey by remember { mutableStateOf(0) }
@@ -154,7 +158,7 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                         android.util.Log.d("PlayerScreen", "READY: $sb")
                     }
                     Player.STATE_BUFFERING -> buffering = true
-                    Player.STATE_ENDED -> isPlaying = false
+                    Player.STATE_ENDED -> { isPlaying = false; ended = true }
                     else -> {}
                 }
             }
@@ -171,6 +175,7 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
     LaunchedEffect(loadKey, retryServer) {
         pstate = 0
         stream = null
+        ended = false
         controlsVisible = true
         try {
             val result = app.resolver.resolve(url, retryServer)
@@ -250,6 +255,16 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                         player.seekTo(maxOf(0L, player.currentPosition - 10_000))
                         true
                     }
+                    // Flutter player: UP shows the chrome, DOWN hides it
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        bumpControls()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        hideJob?.cancel()
+                        controlsVisible = false
+                        true
+                    }
                     else -> false
                 }
             }
@@ -321,6 +336,34 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Ended overlay (Flutter player): "Ended" + gold Replay pill
+        if (pstate == 1 && ended) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        stringResource(R.string.ended),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    ActionPill(
+                        label = stringResource(R.string.replay),
+                        gold = true,
+                        onClick = {
+                            player.seekTo(0)
+                            player.play()
+                            ended = false
+                        }
+                    )
                 }
             }
         }
@@ -409,6 +452,34 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                                 contentDescription = stringResource(R.string.play),
                                 tint = Color.White,
                                 modifier = Modifier.size(48.dp)
+                            )
+                        }
+                    }
+                    // Flutter player bottom info row: title + server + audio pills
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            title,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        val serverName = retryServer
+                        if (!serverName.isNullOrBlank()) {
+                            ActionPill(label = serverName, small = true) {}
+                        }
+                        if (!audioList.isNullOrEmpty() && audioList.size > 1) {
+                            ActionPill(
+                                label = audioList[selectedAudio.coerceIn(0, audioList.size - 1)],
+                                small = true,
+                                onClick = { showAudioDialog = true }
                             )
                         }
                     }

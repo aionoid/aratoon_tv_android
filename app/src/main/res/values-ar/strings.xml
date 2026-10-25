@@ -23,6 +23,8 @@
     <string name="episodes">الحلقات</string>
     <string name="loading">جارٍ التحميل…</string>
     <string name="no_results">لا توجد نتائج</string>
+    <string name="list_mode">قائمة</string>
+    <string name="grid_mode">شبكة</string>
     <string name="error_generic">حدث خطأ ما</string>
     <string name="error_network">تحقق من اتصال الإنترنت</string>
     <string name="retry">إعادة المحاولة</string>
@@ -36,6 +38,11 @@
     <string name="popular">الأكثر شهرة</string>
     <string name="watch_now">شاهد الآن</string>
     <string name="details">التفاصيل</string>
+    <string name="catalog">الكتالوج</string>
+    <string name="tv_app">تطبيق تي في</string>
+    <string name="featured">مميّز</string>
+    <string name="view_all">عرض الكل</string>
+    <string name="watch_episode">مشاهدة الحلقة</string>
 
     <!-- Search -->
     <string name="search_hint">ابحث عن أفلام ومسلسلات…</string>
@@ -72,4 +79,10 @@
     <string name="about">حول التطبيق</string>
     <string name="about_text">أفلام ومسلسلات من موقع stardima.com</string>
     <string name="version">الإصدار</string>
+
+    <!-- Player -->
+    <string name="player_error">خطأ في التشغيل</string>
+    <string name="replay">إعادة التشغيل</string>
+    <string name="ended">انتهى</string>
+    <string name="server">الخادم</string>
 </resources>

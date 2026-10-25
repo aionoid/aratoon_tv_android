@@ -5,30 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - 2026-10-20
+## [0.5.0] - 2026-10-25
 
 ### Added
 
-- Streaming-app home screen: fixed-height hero banner (backdrop + dark
-  gradient + title/description + gold "Watch Now" button) with a "Popular"
-  poster rail, above episodes / recently watched content rails with
-  chevron scroll buttons. The hero and all rails are stacked in a single
-  vertical scroll, so nothing is clipped or overlaps on short screens
-  (e.g. phone landscape)
-- Tapping a "Popular" poster re-selects the hero (Netflix-style): the
-  hero backdrop, title, description, metadata and Watch Now target all
-  follow the selection, and the selected poster is outlined in gold
-- Left sidebar navigation (Movies / Series / Latest / Search / Recently
-  watched / Settings) with a two-tone AraToons logo, replacing the top
-  menu-card row
-- Gold/amber accent theme (Material 3) across the app
-- Quality (e.g. "1080p") now parsed from the API and shown on the hero
-  banner
-- Redesigned poster cards (elevated, rounded, slightly-portrait): cropped
-  image on top with a dark gradient scrim fading into a text panel below
-  that shows the title with the year on the same line, a short
-  description and the quality; thin light border (gold when
-  selected/focused) and a soft drop shadow
+- Full UI recreation matching the Flutter reference app
+  (stardima_tv_flutter): home layout, side navigation, hero carousel,
+  content rails, spotlight cards, focus states and glass effects
+- Home: hero carousel (blurred backdrop + gradient + title/description +
+  gold "Watch now" + add button + pagination dots) over a full-screen
+  blurred backdrop, with a "Popular" poster rail and episode / recently
+  watched rails with chevron scroll buttons. Tapping a poster re-selects
+  the hero (Netflix-style) — backdrop, text and Watch-now target follow
+  the selection, and the selected poster is outlined in gold
+- Catalog: tappable page bar (jump to any page) plus a List/Grid view
+  toggle
+- Player: "ended" overlay with a gold Replay pill, D-pad chrome control
+  (UP shows / DOWN hides the chrome), bottom info row
+- Dedicated Recently Watched screen (grid of watched items)
+- Left sidebar navigation (Home / Movies / Series / Recently Watched /
+  Search / Settings) with a two-tone AraToons logo
+- Gold/amber accent theme (Material 3) across the app; English/Arabic
+  strings for all new screens
+- Quality (e.g. "1080p") parsed from the API and shown on the hero
+- Redesigned poster cards: cropped image with a dark gradient scrim
+  fading into a text panel (title + year, short description, quality);
+  thin light border (gold when focused) and a soft drop shadow
+
+### Fixed
+
+- Blurred background never rendered: the hero bitmap was drawn at its
+  native size while positioned for the scaled size, landing off-screen —
+  now drawn as a scaled destination rect (ContentScale.Crop)
+- Compose 1.7.3 API drift: `animateContentSize` (androidx.compose.
+  animation), `KeyboardActions` (foundation.text), `key`/`type`
+  extensions on Compose KeyEvent, and `IntOffset`/`IntSize` moved to
+  androidx.compose.ui.unit
 
 ## [0.4.0] - 2026-10-20
 

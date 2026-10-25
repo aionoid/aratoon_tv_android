@@ -4,3 +4,4 @@ app/build/
 .gradle/
 local.properties
 .idea/
+output/

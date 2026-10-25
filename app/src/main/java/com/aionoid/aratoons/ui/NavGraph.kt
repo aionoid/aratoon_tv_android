@@ -8,6 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import com.aionoid.aratoons.ui.screens.CatalogScreen
 import com.aionoid.aratoons.ui.screens.HomeScreen
 import com.aionoid.aratoons.ui.screens.PlayerScreen
+import com.aionoid.aratoons.ui.screens.RecentlyWatchedScreen
 import com.aionoid.aratoons.ui.screens.SearchScreen
 import com.aionoid.aratoons.ui.screens.ServerSelectScreen
 import com.aionoid.aratoons.ui.screens.SeriesScreen
@@ -19,10 +20,11 @@ object Routes {
     const val HOME = "home"
     const val CATALOG = "catalog?path={path}&title={title}"
     const val SERIES = "series?slug={slug}"
-    const val SEARCH = "search"
+    const val SEARCH = "search?query={query?}"
     const val SERVERS = "servers?play={play}&title={title}&poster={poster}"
     const val PLAYER = "player?url={url}&title={title}&poster={poster}&server={server?}"
     const val SETTINGS = "settings"
+    const val RECENTLY = "recently"
 
     fun servers(play: String, title: String, poster: String): String =
         "servers?play=${URLEncoder.encode(play, "UTF-8")}" +
@@ -34,6 +36,9 @@ object Routes {
 
     fun series(slug: String): String =
         "series?slug=${URLEncoder.encode(slug, "UTF-8")}"
+
+    fun search(query: String): String =
+        "search?query=${URLEncoder.encode(query, "UTF-8")}"
 
     fun player(url: String, title: String, poster: String, server: String? = null): String =
         "player?url=${URLEncoder.encode(url, "UTF-8")}" +
@@ -65,8 +70,14 @@ fun AraToonsNavHost() {
                 navController = navController
             )
         }
-        composable(Routes.SEARCH) {
-            SearchScreen(navController)
+        composable(Routes.SEARCH) { back ->
+            SearchScreen(
+                navController = navController,
+                initialQuery = Routes.dec(back.arguments?.getString("query"))
+            )
+        }
+        composable(Routes.RECENTLY) {
+            RecentlyWatchedScreen(navController)
         }
         composable(Routes.SERVERS) { back ->
             val play = Routes.dec(back.arguments?.getString("play"))

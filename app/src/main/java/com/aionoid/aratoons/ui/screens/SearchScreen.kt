@@ -37,6 +37,7 @@ import com.aionoid.aratoons.data.StardimaApi
 import com.aionoid.aratoons.data.VideoItem
 import com.aionoid.aratoons.ui.ErrorBox
 import com.aionoid.aratoons.ui.LoadingBox
+import com.aionoid.aratoons.ui.PageDropdown
 import com.aionoid.aratoons.ui.PosterCard
 import com.aionoid.aratoons.ui.Routes
 import com.aionoid.aratoons.ui.systemBarsContentPadding
@@ -48,12 +49,12 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun SearchScreen(navController: NavHostController) {
+fun SearchScreen(navController: NavHostController, initialQuery: String = "") {
     val app = App.instance
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
 
-    var query by rememberSaveable { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf(initialQuery) }
     var searchedQuery by remember { mutableStateOf("") }
     var page by rememberSaveable { mutableStateOf(1) }
     var lastPage by remember { mutableStateOf(1) }
@@ -96,9 +97,11 @@ fun SearchScreen(navController: NavHostController) {
 
     val list = items ?: emptyList()
 
-    // Leanback: start focus on the search field
+    // Leanback: start focus on the search field; auto-run a query that
+    // arrived via the top-bar search field (search?query=…)
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
+        if (initialQuery.trim().isNotEmpty()) doSearch()
     }
 
     LazyVerticalGrid(
