@@ -221,12 +221,10 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
     }
 
     fun bumpControls() {
-        android.util.Log.d("PlayerDebug", "bump: showing")
         controlsVisible = true
         hideJob?.cancel()
         hideJob = scope.launch {
             delay(5000)
-            android.util.Log.d("PlayerDebug", "bump: auto-hide")
             controlsVisible = false
         }
     }
@@ -341,7 +339,6 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
             .onKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 if (native.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
-                android.util.Log.d("PlayerDebug", "BOXKEY ${native.keyCode} pstate=$pstate focused=$boxFocused")
                 // D-pad keys are ALWAYS consumed (even while resolving or in
                 // the error state) so they don't bubble to the nav host and
                 // pop the player. BACK still passes through (else -> false).
@@ -417,7 +414,6 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
         DisposableEffect(activity) {
             if (activity != null) {
                 activity.setPlayerKeyHandler { event ->
-                    android.util.Log.d("PlayerDebug", "ACTKEY ${event.keyCode} pstate=$pstate d=$showServerDialog/$showAudioDialog/$showSubtitleDialog")
                     if (pstate != 1 || showServerDialog || showAudioDialog || showSubtitleDialog) {
                         false
                     } else when (event.keyCode) {
@@ -469,7 +465,6 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                 if (pstate == 1 && !boxFocused &&
                     !showServerDialog && !showAudioDialog && !showSubtitleDialog
                 ) {
-                    android.util.Log.d("PlayerDebug", "self-heal: clear+re-request focus")
                     focusManager.clearFocus(force = true)
                     delay(250)
                     focusRequester.requestFocus()
