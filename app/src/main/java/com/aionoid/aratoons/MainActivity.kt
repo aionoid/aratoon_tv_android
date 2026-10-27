@@ -2,6 +2,7 @@ package com.aionoid.aratoons
 
 import android.content.Context
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +19,29 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val PREFS = "aratoons"
         const val KEY_LANGUAGE = "language" // "" = follow system, "en", "ar"
+    }
+
+    /**
+     * Backstop key handler for the player screen. Runs BEFORE the view
+     * hierarchy receives the event, because the Compose focus owner can
+     * swallow D-pad keys when no composable holds focus (e.g. right after
+     * the controls overlay auto-hides), which no view-level OnKeyListener
+     * can see. The player installs a handler while playback is active and
+     * no dialog is open; a handler returning `false` lets the event fall
+     * through to the normal dispatch (dialogs, back navigation, system keys).
+     */
+    private var playerKeyHandler: ((KeyEvent) -> Boolean)? = null
+
+    fun setPlayerKeyHandler(handler: ((KeyEvent) -> Boolean)?) {
+        playerKeyHandler = handler
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val handler = playerKeyHandler
+        if (handler != null && event.action == KeyEvent.ACTION_DOWN && handler(event)) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     /** Apply the user-selected interface language (EN/AR) to all resources. */

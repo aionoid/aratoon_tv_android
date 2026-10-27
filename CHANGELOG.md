@@ -24,6 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   or the last interaction, and resurface on any tap, D-pad center, seek,
   or UP — the video is unobstructed by default
 
+### Fixed
+
+- D-pad keys (notably UP) could stop working after the controls
+  auto-hid: the player surface silently lost Compose focus when the
+  overlay left the composition. Focus is now re-granted automatically
+  and a root-view key backstop covers the in-between window
+- Tap on the video now reliably resurfaces the controls (touch events
+  are claimed by the player view so Compose forwards them)
+- The unused built-in PlayerView control bar can no longer steal
+  Android-level focus from the D-pad layer
+
 ## [0.6.0] - 2026-10-27
 
 ### Changed

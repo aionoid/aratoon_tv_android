@@ -1,11 +1,9 @@
 package com.aionoid.aratoons.ui.screens
 
 import android.content.Context
-import android.util.Log
 import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,8 +45,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -126,7 +124,6 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
     fun refreshAudioTracks() {
         val groups = player.currentTracks.groups
             .filter { it.type == C.TRACK_TYPE_AUDIO }
-        Log.d("PlayerDebug", "refreshAudio: ${groups.size} groups")
         audioTracks = groups.map { g ->
             val t = g.getTrackFormat(0)
             t.label?.takeIf { it.isNotEmpty() }
@@ -138,7 +135,6 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
     fun refreshSubtitleTracks() {
         val groups = player.currentTracks.groups
             .filter { it.type == C.TRACK_TYPE_TEXT }
-        Log.d("PlayerDebug", "refreshSubtitle: ${groups.size} groups")
         subtitleTracks = groups.map { g ->
             val t = g.getTrackFormat(0)
             t.label?.takeIf { it.isNotEmpty() }
@@ -225,14 +221,14 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
     }
 
     fun bumpControls() {
+        android.util.Log.d("PlayerDebug", "bump: showing")
         controlsVisible = true
         hideJob?.cancel()
-         Log.d("PlayerDebug", "bumpControls: showing")
-         hideJob = scope.launch {
-             delay(5000)
-             Log.d("PlayerDebug", "bumpControls: hiding")
-             controlsVisible = false
-         }
+        hideJob = scope.launch {
+            delay(5000)
+            android.util.Log.d("PlayerDebug", "bump: auto-hide")
+            controlsVisible = false
+        }
     }
 
     // Player listener
@@ -245,15 +241,6 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                         refreshAudioTracks()
                         refreshSubtitleTracks()
                         applyArabicDefaults()
-                        scope.launch {
-                            while (true) {
-                                delay(10000)
-                                player.currentTracks.groups.forEach { g ->
-                                    val f = g.mediaTrackGroup.getFormat(0)
-                                    Log.d("PlayerDebug", "GRP type=${g.type} n=${g.mediaTrackGroup.length} lang=${f.language} label=${f.label}")
-                                }
-                            }
-                        }
                     }
                     Player.STATE_BUFFERING -> buffering = true
                     Player.STATE_ENDED -> { isPlaying = false; ended = true }
@@ -299,7 +286,6 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                 return@LaunchedEffect
             }
             stream = result
-            Log.d("PlayerDebug", "STREAM: ${result.url} | ${result.headers}")
             val httpFactory = DefaultHttpDataSource.Factory()
                 .setDefaultRequestProperties(result.headers)
                 .setConnectTimeoutMs(15000)
@@ -349,18 +335,13 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { pos ->
-                    Log.d("PlayerDebug", "Box tap at $pos")
-                })
-            }
             .focusable()
             .onFocusChanged { boxFocused = it.isFocused }
             .focusRequester(focusRequester)
             .onKeyEvent { event ->
                 val native = event.nativeKeyEvent
-                Log.d("PlayerDebug", "KEY action=${native?.action} code=${native?.keyCode} pstate=$pstate")
                 if (native.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                android.util.Log.d("PlayerDebug", "BOXKEY ${native.keyCode} pstate=$pstate focused=$boxFocused")
                 // D-pad keys are ALWAYS consumed (even while resolving or in
                 // the error state) so they don't bubble to the nav host and
                 // pop the player. BACK still passes through (else -> false).
@@ -423,14 +404,75 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
             }
         }
 
+        val focusManager = LocalFocusManager.current
+        val activity = LocalContext.current as? com.aionoid.aratoons.MainActivity
+        // The Compose focus owner can swallow D-pad keys when no composable
+        // holds focus (notably the brief window after the auto-hide overlay
+        // leaves, before self-healing below re-grants focus), so a
+        // view-level OnKeyListener never sees them. The Activity's
+        // dispatchKeyEvent runs before the whole view hierarchy — mirror the
+        // D-pad handling there as a backstop while playback is active and no
+        // dialog is open. Returns false otherwise so dialogs, back
+        // navigation and system keys keep working normally.
+        DisposableEffect(activity) {
+            if (activity != null) {
+                activity.setPlayerKeyHandler { event ->
+                    android.util.Log.d("PlayerDebug", "ACTKEY ${event.keyCode} pstate=$pstate d=$showServerDialog/$showAudioDialog/$showSubtitleDialog")
+                    if (pstate != 1 || showServerDialog || showAudioDialog || showSubtitleDialog) {
+                        false
+                    } else when (event.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            bumpControls()
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            hideJob?.cancel()
+                            controlsVisible = false
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            player.seekTo(maxOf(0L, player.currentPosition - 10_000))
+                            bumpControls()
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            if (durationMs > 0) {
+                                player.seekTo(minOf(player.currentPosition + 10_000, durationMs))
+                                bumpControls()
+                            }
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                            if (!buffering) {
+                                if (isPlaying) player.pause() else player.play()
+                            }
+                            bumpControls()
+                            true
+                        }
+                        else -> false
+                    }
+                }
+            }
+            onDispose { activity?.setPlayerKeyHandler(null) }
+        }
+        // Focus self-healing: after the controls overlay is auto-hidden the
+        // Box can silently lose Compose focus, so D-pad keys stop reaching
+        // onKeyEvent. The root-view key listener above covers that case, but
+        // re-granting focus here keeps the primary path alive. A plain
+        // requestFocus never sticks once focus is lost; clearFocus(force)
+        // first resets the focus owner to the root, after which the request
+        // succeeds. Skipped while a dialog is open so focus stays in the
+        // dialog.
         LaunchedEffect(Unit) {
             while (true) {
                 delay(1000)
-                if (pstate == 1 && !boxFocused) {
-                    Log.d("PlayerDebug", "focus=FALSE -> re-request")
+                if (pstate == 1 && !boxFocused &&
+                    !showServerDialog && !showAudioDialog && !showSubtitleDialog
+                ) {
+                    android.util.Log.d("PlayerDebug", "self-heal: clear+re-request focus")
+                    focusManager.clearFocus(force = true)
+                    delay(250)
                     focusRequester.requestFocus()
-                } else {
-                    Log.d("PlayerDebug", "focus=$boxFocused")
                 }
             }
         }
@@ -460,7 +502,6 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                     // and the view reports unclaimed when no touch/click
                     // listener returns true (PlayerView is not clickable).
                     setOnTouchListener { _, ev ->
-                        Log.d("PlayerDebug", "PlayerView touch action=" + ev.action)
                         if (ev.action == android.view.MotionEvent.ACTION_UP) bumpControls()
                         true
                     }
