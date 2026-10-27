@@ -85,4 +85,8 @@
     <string name="replay">Replay</string>
     <string name="ended">Ended</string>
     <string name="server">Server</string>
+    <string name="subtitles">Subtitles</string>
+    <string name="subtitles_off">Off</string>
+    <string name="rewind_10s">Rewind 10 seconds</string>
+    <string name="forward_10s">Forward 10 seconds</string>
 </resources>

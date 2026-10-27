@@ -85,4 +85,8 @@
     <string name="replay">إعادة التشغيل</string>
     <string name="ended">انتهى</string>
     <string name="server">الخادم</string>
+    <string name="subtitles">العناوين</string>
+    <string name="subtitles_off">إيقاف</string>
+    <string name="rewind_10s">رجوع 10 ثوانٍ</string>
+    <string name="forward_10s">تقديم 10 ثوانٍ</string>
 </resources>

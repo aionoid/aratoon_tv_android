@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-10-27
+
+### Added
+
+- Player: **fast-forward / rewind (±10 s)** buttons in the control bar
+  (D-pad left/right already seeked; now visible as buttons too)
+- Player: **subtitle selection** — a Subtitles button (top bar) with a
+  dialog offering each available text track plus an **Off** option.
+  Shown only when the stream carries subtitle tracks
+- Player: **Arabic is the default** for both audio and subtitles when an
+  Arabic track exists (user preference); the existing language selector
+  still lets you switch at any time
+
+### Changed
+
+- Player controls now **auto-hide** a few seconds after playback starts
+  or the last interaction, and resurface on any tap, D-pad center, seek,
+  or UP — the video is unobstructed by default
+
 ## [0.6.0] - 2026-10-27
 
 ### Changed

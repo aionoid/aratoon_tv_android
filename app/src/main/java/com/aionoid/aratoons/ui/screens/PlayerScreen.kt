@@ -1,8 +1,11 @@
 package com.aionoid.aratoons.ui.screens
 
 import android.content.Context
+import android.util.Log
 import android.view.KeyEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +19,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -38,8 +44,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,8 +58,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Tracks
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -90,6 +100,11 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
     var showAudioDialog by remember { mutableStateOf(false) }
     var audioTracks by remember { mutableStateOf<List<String>?>(null) }
     var selectedAudio by remember { mutableStateOf(0) }
+    var showSubtitleDialog by remember { mutableStateOf(false) }
+    var subtitleTracks by remember { mutableStateOf<List<String>?>(null) }
+    var selectedSubtitle by remember { mutableStateOf(-1) } // -1 = off
+    var audioDefaultApplied by remember { mutableStateOf(false) }
+    var subtitleDefaultApplied by remember { mutableStateOf(false) }
     var controlsVisible by remember { mutableStateOf(true) }
     var buffering by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(true) }
@@ -104,12 +119,14 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
             .build()
     }
     val focusRequester = remember { FocusRequester() }
+    var boxFocused by remember { mutableStateOf(false) }
     var hideJob by remember { mutableStateOf<Job?>(null) }
     var recentAdded by remember { mutableStateOf(false) }
 
     fun refreshAudioTracks() {
         val groups = player.currentTracks.groups
             .filter { it.type == C.TRACK_TYPE_AUDIO }
+        Log.d("PlayerDebug", "refreshAudio: ${groups.size} groups")
         audioTracks = groups.map { g ->
             val t = g.getTrackFormat(0)
             t.label?.takeIf { it.isNotEmpty() }
@@ -118,25 +135,104 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
         }
     }
 
+    fun refreshSubtitleTracks() {
+        val groups = player.currentTracks.groups
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+        Log.d("PlayerDebug", "refreshSubtitle: ${groups.size} groups")
+        subtitleTracks = groups.map { g ->
+            val t = g.getTrackFormat(0)
+            t.label?.takeIf { it.isNotEmpty() }
+                ?: t.language?.takeIf { it.isNotEmpty() }
+                ?: "Subtitles"
+        }
+    }
+
+    fun isArabic(format: Format): Boolean {
+        val lang = format.language ?: ""
+        if (lang.startsWith("ara") || lang == "ar") return true
+        val label = format.label ?: ""
+        return label.contains("عربي", ignoreCase = true) ||
+            label.contains("arab", ignoreCase = true)
+    }
+
+    /** Applies the currently selected audio + subtitle tracks to the player. */
+    fun applyTrackSelections() {
+        val all = player.currentTracks.groups
+        val audioGroups = all.filter { it.type == C.TRACK_TYPE_AUDIO }
+        val textGroups = all.filter { it.type == C.TRACK_TYPE_TEXT }
+        val builder = player.trackSelectionParameters.buildUpon().clearOverrides()
+        if (selectedAudio in audioGroups.indices) {
+            builder.addOverride(
+                TrackSelectionOverride(audioGroups[selectedAudio].mediaTrackGroup, 0)
+            )
+        }
+        if (textGroups.isNotEmpty()) {
+            if (selectedSubtitle in textGroups.indices) {
+                builder.addOverride(
+                    TrackSelectionOverride(textGroups[selectedSubtitle].mediaTrackGroup, 0)
+                )
+            } else {
+                // OFF: override every text group with an empty selection so
+                // ExoPlayer's language-based auto-select stays quiet.
+                for (g in textGroups) {
+                    // An override with no track indices forces "no track" for
+                    // this group (media3 1.4.1), suppressing auto-selection.
+                    builder.addOverride(TrackSelectionOverride(g.mediaTrackGroup, emptyList()))
+                }
+            }
+        }
+        player.setTrackSelectionParameters(builder.build())
+    }
+
     fun selectAudio(index: Int) {
         val groups = player.currentTracks.groups
             .filter { it.type == C.TRACK_TYPE_AUDIO }
         if (index < 0 || index >= groups.size) return
         selectedAudio = index
-        val params = player.trackSelectionParameters.buildUpon()
-            .clearOverrides()
-            .addOverride(TrackSelectionOverride(groups[index].mediaTrackGroup, 0))
-            .build()
-        player.setTrackSelectionParameters(params)
+        applyTrackSelections()
+    }
+
+    fun selectSubtitle(index: Int) {
+        val groups = player.currentTracks.groups
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+        if (index != -1 && (index < 0 || index >= groups.size)) return
+        selectedSubtitle = index
+        applyTrackSelections()
+    }
+
+    // Default to the Arabic audio/subtitle track when available (user
+    // preference). The flags are only set once an Arabic track has actually
+    // been selected, so late-arriving track groups are still honored.
+    fun applyArabicDefaults() {
+        val audioGroups = player.currentTracks.groups
+            .filter { it.type == C.TRACK_TYPE_AUDIO }
+        if (!audioDefaultApplied && audioGroups.isNotEmpty()) {
+            val ara = audioGroups.indexOfFirst { isArabic(it.getTrackFormat(0)) }
+            if (ara >= 0) {
+                selectAudio(ara)
+                audioDefaultApplied = true
+            }
+        }
+        val subGroups = player.currentTracks.groups
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+        if (!subtitleDefaultApplied && subGroups.isNotEmpty()) {
+            val ara = subGroups.indexOfFirst { isArabic(it.getTrackFormat(0)) }
+            if (ara >= 0) {
+                selectSubtitle(ara)
+                subtitleDefaultApplied = true
+            }
+        }
     }
 
     fun bumpControls() {
         controlsVisible = true
         hideJob?.cancel()
-        hideJob = scope.launch {
-            delay(5000)
-            controlsVisible = false
-        }
+         Log.d("PlayerDebug", "bumpControls: showing")
+         hideJob = scope.launch {
+             delay(5000)
+             Log.d("PlayerDebug", "bumpControls: hiding")
+             controlsVisible = false
+         }
     }
 
     // Player listener
@@ -147,20 +243,31 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                     Player.STATE_READY -> {
                         buffering = false
                         refreshAudioTracks()
-                        // Track selection diagnostics (audio-only playback hunt)
-                        val sb = StringBuilder()
-                        for (g in player.currentTracks.groups) {
-                            sb.append("[type=").append(g.type)
-                                .append(" selected=").append(g.isSelected())
-                                .append(" tracks=").append(g.length)
-                                .append("]")
+                        refreshSubtitleTracks()
+                        applyArabicDefaults()
+                        scope.launch {
+                            while (true) {
+                                delay(10000)
+                                player.currentTracks.groups.forEach { g ->
+                                    val f = g.mediaTrackGroup.getFormat(0)
+                                    Log.d("PlayerDebug", "GRP type=${g.type} n=${g.mediaTrackGroup.length} lang=${f.language} label=${f.label}")
+                                }
+                            }
                         }
-                        android.util.Log.d("PlayerScreen", "READY: $sb")
                     }
                     Player.STATE_BUFFERING -> buffering = true
                     Player.STATE_ENDED -> { isPlaying = false; ended = true }
                     else -> {}
                 }
+            }
+
+            override fun onTracksChanged(tracks: Tracks) {
+                // HLS track groups (audio variants, text renditions) arrive
+                // incrementally — often AFTER STATE_READY — so refresh the
+                // lists and (re)apply the Arabic defaults whenever they change.
+                refreshAudioTracks()
+                refreshSubtitleTracks()
+                applyArabicDefaults()
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -176,6 +283,11 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
         pstate = 0
         stream = null
         ended = false
+        audioTracks = null
+        subtitleTracks = null
+        selectedSubtitle = -1
+        audioDefaultApplied = false
+        subtitleDefaultApplied = false
         controlsVisible = true
         try {
             val result = app.resolver.resolve(url, retryServer)
@@ -187,6 +299,7 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                 return@LaunchedEffect
             }
             stream = result
+            Log.d("PlayerDebug", "STREAM: ${result.url} | ${result.headers}")
             val httpFactory = DefaultHttpDataSource.Factory()
                 .setDefaultRequestProperties(result.headers)
                 .setConnectTimeoutMs(15000)
@@ -203,6 +316,7 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
             player.prepare()
             player.play()
             pstate = 1
+            bumpControls() // controls shown now, auto-hide a few seconds in
             if (!recentAdded) {
                 RecentlyWatched.add(app, title, url, poster)
                 recentAdded = true
@@ -235,9 +349,17 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { pos ->
+                    Log.d("PlayerDebug", "Box tap at $pos")
+                })
+            }
+            .focusable()
+            .onFocusChanged { boxFocused = it.isFocused }
             .focusRequester(focusRequester)
             .onKeyEvent { event ->
                 val native = event.nativeKeyEvent
+                Log.d("PlayerDebug", "KEY action=${native?.action} code=${native?.keyCode} pstate=$pstate")
                 if (native.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
                 // D-pad keys are ALWAYS consumed (even while resolving or in
                 // the error state) so they don't bubble to the nav host and
@@ -245,20 +367,25 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                 when (native.keyCode) {
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                         if (pstate == 1) {
-                            if (buffering) return@onKeyEvent true
+                            if (buffering) {
+                                return@onKeyEvent true
+                            }
                             if (isPlaying) player.pause() else player.play()
+                            bumpControls()
                         }
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
                         if (pstate == 1 && durationMs > 0) {
                             player.seekTo(minOf(player.currentPosition + 10_000, durationMs))
+                            bumpControls()
                         }
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
                         if (pstate == 1) {
                             player.seekTo(maxOf(0L, player.currentPosition - 10_000))
+                            bumpControls()
                         }
                         true
                     }
@@ -280,6 +407,34 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
     ) {
         LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
+        // Re-claim focus when playback (re)starts: the Retry button or an
+        // open dialog can hold focus, and with no focus the D-pad is lost.
+        LaunchedEffect(pstate) {
+            if (pstate == 1) focusRequester.requestFocus()
+        }
+
+        // The Box can also LOSE focus when the controls overlay is removed
+        // from composition (auto-hide) — the D-pad then goes nowhere.
+        // Re-claim on every show/hide toggle so a keypress always works.
+        LaunchedEffect(controlsVisible) {
+            if (pstate == 1) {
+                delay(150)
+                focusRequester.requestFocus()
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(1000)
+                if (pstate == 1 && !boxFocused) {
+                    Log.d("PlayerDebug", "focus=FALSE -> re-request")
+                    focusRequester.requestFocus()
+                } else {
+                    Log.d("PlayerDebug", "focus=$boxFocused")
+                }
+            }
+        }
+
         AndroidView(
             factory = { ctx ->
                 // Inflated from XML so app:surface_type="texture_view" applies
@@ -290,7 +445,25 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                 (android.view.LayoutInflater.from(ctx).inflate(R.layout.player_view, null) as androidx.media3.ui.PlayerView).apply {
                     this.player = player
                     useController = false
+                    // The built-in control bar is never used, but its
+                    // DefaultTimeBar is focusable and can steal Android-level
+                    // focus from the Compose layer (D-pad keys then go
+                    // nowhere). Block all focus inside the PlayerView.
+                    isFocusable = false
+                    isFocusableInTouchMode = false
+                    descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    // Any tap on the video resurfaces the controls; the
+                    // auto-hide timer takes care of hiding them again.
+                    // Must return true: Compose's PointerInteropFilter only
+                    // forwards ACTION_UP to the view if it "claimed" the DOWN,
+                    // and the view reports unclaimed when no touch/click
+                    // listener returns true (PlayerView is not clickable).
+                    setOnTouchListener { _, ev ->
+                        Log.d("PlayerDebug", "PlayerView touch action=" + ev.action)
+                        if (ev.action == android.view.MotionEvent.ACTION_UP) bumpControls()
+                        true
+                    }
                 }
             },
             modifier = Modifier.fillMaxSize()
@@ -400,6 +573,16 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
+                    if (!subtitleTracks.isNullOrEmpty()) {
+                        IconButton(onClick = { showSubtitleDialog = true }) {
+                            Icon(
+                                Icons.Filled.Subtitles,
+                                contentDescription = stringResource(R.string.subtitles),
+                                tint = if (selectedSubtitle >= 0) Color.White
+                                else Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
                     if (!audioList.isNullOrEmpty() && audioList.size > 1) {
                         IconButton(onClick = { showAudioDialog = true }) {
                             Icon(
@@ -429,6 +612,7 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                             onValueChange = { frac ->
                                 if (durationMs > 0) {
                                     player.seekTo((frac * durationMs).toLong())
+                                    bumpControls()
                                 }
                             },
                             modifier = Modifier
@@ -442,27 +626,54 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                         )
                     }
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.Center,
+                      verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
-                            onClick = {
-                                if (buffering) return@IconButton
-                                if (isPlaying) {
-                                    player.pause()
-                                } else {
-                                    player.play()
-                                }
-                            }
-                        ) {
-                            Icon(
-                                if (isPlaying && !buffering) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                contentDescription = stringResource(R.string.play),
-                                tint = Color.White,
-                                modifier = Modifier.size(48.dp)
-                            )
-                        }
+                      IconButton(onClick = {
+                          if (pstate == 1) {
+                              player.seekTo(maxOf(0L, player.currentPosition - 10_000))
+                              bumpControls()
+                          }
+                      }) {
+                          Icon(
+                              Icons.Filled.Replay10,
+                              contentDescription = stringResource(R.string.rewind_10s),
+                              tint = Color.White,
+                              modifier = Modifier.size(40.dp)
+                          )
+                      }
+                      IconButton(
+                          onClick = {
+                              if (buffering) return@IconButton
+                              if (isPlaying) {
+                                  player.pause()
+                              } else {
+                                  player.play()
+                              }
+                              bumpControls()
+                          }
+                      ) {
+                          Icon(
+                              if (isPlaying && !buffering) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                              contentDescription = stringResource(R.string.play),
+                              tint = Color.White,
+                              modifier = Modifier.size(48.dp)
+                          )
+                      }
+                      IconButton(onClick = {
+                          if (pstate == 1 && durationMs > 0) {
+                              player.seekTo(minOf(player.currentPosition + 10_000, durationMs))
+                              bumpControls()
+                          }
+                      }) {
+                          Icon(
+                              Icons.Filled.Forward10,
+                              contentDescription = stringResource(R.string.forward_10s),
+                              tint = Color.White,
+                              modifier = Modifier.size(40.dp)
+                          )
+                      }
                     }
                     // Flutter player bottom info row: title + server + audio pills
                     Spacer(Modifier.height(12.dp))
@@ -531,7 +742,10 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
     val audioList = audioTracks
     if (showAudioDialog && !audioList.isNullOrEmpty()) {
         AlertDialog(
-            onDismissRequest = { showAudioDialog = false },
+            onDismissRequest = {
+                showAudioDialog = false
+                bumpControls()
+            },
             title = { Text(stringResource(R.string.audio)) },
             text = {
                 Column {
@@ -540,11 +754,59 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
                             onClick = {
                                 selectAudio(index)
                                 showAudioDialog = false
+                                bumpControls()
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
                                 name + if (index == selectedAudio) "  ✓" else "",
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Start
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
+    // Subtitle selection dialog
+    val subtitleList = subtitleTracks
+    if (showSubtitleDialog && !subtitleList.isNullOrEmpty()) {
+        AlertDialog(
+            onDismissRequest = {
+                showSubtitleDialog = false
+                bumpControls()
+            },
+            title = { Text(stringResource(R.string.subtitles)) },
+            text = {
+                Column {
+                    TextButton(
+                        onClick = {
+                            selectSubtitle(-1)
+                            showSubtitleDialog = false
+                            bumpControls()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            stringResource(R.string.subtitles_off) + if (selectedSubtitle == -1) "  ✓" else "",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Start
+                        )
+                    }
+                    subtitleList.forEachIndexed { index, name ->
+                        TextButton(
+                            onClick = {
+                                selectSubtitle(index)
+                                showSubtitleDialog = false
+                                bumpControls()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                name + if (index == selectedSubtitle) "  ✓" else "",
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Start
                             )
@@ -581,3 +843,5 @@ private fun formatTime(ms: Long): String {
         "%d:%02d".format(m, s)
     }
 }
+
+
