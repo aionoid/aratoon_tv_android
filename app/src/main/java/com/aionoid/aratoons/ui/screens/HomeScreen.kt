@@ -1,6 +1,7 @@
 package com.aionoid.aratoons.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,6 +32,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -41,8 +45,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.aionoid.aratoons.App
 import com.aionoid.aratoons.R
 import com.aionoid.aratoons.data.RecentlyWatched
@@ -135,6 +139,11 @@ fun HomeScreen(navController: NavHostController) {
         navController.navigate(Routes.series(it.url.substringAfterLast("/")))
     }
 
+    /** Flutter _openItem: series open the Series screen, movies the servers. */
+    fun heroOpen(it: VideoItem) {
+        if (it.isSeries) seriesOnClick(it) else movieOnClick(it)
+    }
+
     fun recentOnClick(it: VideoItem) {
         when {
             it.url.contains("/play/") -> movieOnClick(it) // replay the episode
@@ -217,12 +226,27 @@ fun HomeScreen(navController: NavHostController) {
                 // Hero (0.42 of the remaining height, clamped 230–320dp)
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val heroH = (maxHeight * 0.42f).coerceIn(230.dp, 320.dp)
+                    // Flutter home_screen: sharp hero image. Backdrops
+                    // (/b/, landscape) are full-bleed cover; posters are
+                    // shown whole and sharp in a 2:3 box on the right.
+                    val heroItem = hero
+                    val heroImage = when {
+                        heroItem == null -> ""
+                        heroItem.backgroundUrl.isNotEmpty() -> heroItem.backgroundUrl
+                        heroItem.posterUrl.isNotEmpty() ->
+                            StardimaApi.upscalePoster(heroItem.posterUrl)
+                        else -> ""
+                    }
+                    val heroCover = heroImage.contains("/b/")
+                    val posterBoxH = heroH - 20.dp
+                    val posterBoxW = posterBoxH * 2f / 3f
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(heroH)
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color.Black.copy(alpha = 0.25f))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(2.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(20.dp))
                             .focusable()
                             .focusRequester(heroFocus)
                             .onKeyEvent { keyEvent ->
@@ -263,129 +287,166 @@ fun HomeScreen(navController: NavHostController) {
                                 }
                             }
                     ) {
-                        // Hero poster (cover) + legibility gradients
-                        if (hero?.posterUrl?.isNotEmpty() == true) {
-                            BlurredImage(
-                                model = hero.posterUrl,
-                                modifier = Modifier.fillMaxSize(),
-                                blurRadius = 14f,
-                                fullFrame = true,
-                                alpha = 0.9f
-                            )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(18.dp))
+                        ) {
+                            // Sharp hero image (never blurred inside the card)
+                            if (heroImage.isNotEmpty()) {
+                                if (heroCover) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(heroImage)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(end = 28.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(LocalContext.current)
+                                                .data(heroImage)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.size(posterBoxW, posterBoxH)
+                                        )
+                                    }
+                                }
+                            }
+                            // Left→right dark gradient (Flutter: 0.62 → 0.30 @ 45% → 0.05)
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
                                         Brush.horizontalGradient(
-                                            0f to Color.Black.copy(alpha = 0.75f),
-                                            0.45f to Color.Black.copy(alpha = 0.35f),
-                                            1f to Color.Transparent
+                                            0f to Color.Black.copy(alpha = 0.62f),
+                                            0.45f to Color.Black.copy(alpha = 0.30f),
+                                            1f to Color.Black.copy(alpha = 0.05f)
                                         )
                                     )
                             )
-                        }
-
-                        if (featured == null && !error) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                LoadingBox(Modifier.size(48.dp))
-                            }
-                        }
-                        if (error && featured == null) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                ErrorBox(
-                                    message = stringResource(R.string.error_generic),
-                                    onRetry = { loadKey++ }
-                                )
-                            }
-                        }
-
-                        // Hero content (bottom-left)
-                        if (hero != null) {
-                            Column(
+                            // Bottom fade (Flutter: 140px, transparent → black 0.72)
+                            Box(
                                 modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(24.dp)
-                            ) {
-                                Text(
-                                    text = hero.title,
-                                    style = MaterialTheme.typography.headlineMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 32.sp
-                                    ),
-                                    color = Color.White,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                if (hero.description.isNotEmpty()) {
-                                    Text(
-                                        text = hero.description,
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontSize = 14.sp
-                                        ),
-                                        color = Color(0xFFD6D6D6),
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier
-                                            .padding(top = 10.dp)
-                                            .widthIn(max = 600.dp)
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .height(140.dp)
+                                    .background(
+                                      Brush.verticalGradient(
+                                          listOf(
+                                              Color.Transparent,
+                                              Color.Black.copy(alpha = 0.72f)
+                                          )
+                                      )
+                                    )
+                            )
+
+                            if (featured == null && !error) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    LoadingBox(Modifier.size(48.dp))
+                                }
+                            }
+                            if (error && featured == null) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    ErrorBox(
+                                        message = stringResource(R.string.error_generic),
+                                        onRetry = { loadKey++ }
                                     )
                                 }
-                                Row(
-                                    modifier = Modifier.padding(top = 14.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                            }
+
+                            // Hero text block (top-left, kept clear of the poster on the right)
+                            if (hero != null) {
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(
+                                            start = 28.dp,
+                                            top = 24.dp,
+                                            end = if (heroCover) 28.dp else 44.dp + posterBoxW
+                                        )
                                 ) {
-                                    // Solid gold "Watch now"
-                                    Button(
-                                        onClick = {
-                                            navController.navigate(
-                                                Routes.servers(hero.url, hero.title, hero.posterUrl)
-                                            )
-                                        },
-                                        shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
-                                        colors = ButtonDefaults.colors(
-                                            containerColor = MaterialTheme.colorScheme.primary,
-                                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                                            focusedContainerColor = MaterialTheme.colorScheme.primary,
-                                            focusedContentColor = MaterialTheme.colorScheme.onPrimary,
-                                            pressedContainerColor = MaterialTheme.colorScheme.primary.copy(
-                                                alpha = 0.85f
-                                            )
-                                        )
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.PlayArrow,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
+                                    Text(
+                                        text = hero.title,
+                                        style = MaterialTheme.typography.headlineMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 32.sp
+                                        ),
+                                        color = Color.White,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (hero.description.isNotEmpty()) {
                                         Text(
-                                            stringResource(R.string.watch_now),
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                fontSize = 15.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                            text = hero.description,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontSize = 14.sp
+                                            ),
+                                            color = Color.White,
+                                            maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier
+                                                .padding(top = 8.dp)
+                                                .widthIn(max = 600.dp)
                                         )
                                     }
-                                    // Circular "+" — add to recently watched
-                                    HeroCircleButton(
-                                        onClick = {
-                                            recent = RecentlyWatched.add(
-                                                context,
-                                                hero.title,
-                                                hero.url,
-                                                hero.posterUrl
-                                            ).toItems()
-                                        },
-                                        icon = Icons.Filled.Add
-                                    )
-                                }
-                                // Hero carousel dots
-                                if (heroCount > 1) {
-                                    HeroDots(
-                                        count = heroCount,
-                                        index = heroIndex,
-                                        modifier = Modifier.padding(top = 12.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(top = 14.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Solid gold button. material3.Button
+                                        // (unlike tv-material's) handles both
+                                        // D-pad ENTER and touch.
+                                        Button(
+                                            onClick = { heroOpen(hero) },
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.PlayArrow,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                stringResource(
+                                                    if (hero.isSeries) R.string.watch_episode
+                                                    else R.string.watch_now
+                                                ),
+                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                    fontSize = 15.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            )
+                                        }
+                                        // Glass circle — also opens the item (Flutter)
+                                        HeroCircleButton(
+                                            onClick = { heroOpen(hero) },
+                                            icon = Icons.Filled.Add
+                                        )
+                                    }
+                                    // Hero carousel dots
+                                    if (heroCount > 1) {
+                                        HeroDots(
+                                            count = heroCount,
+                                            index = heroIndex,
+                                            modifier = Modifier.padding(top = 12.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -38,6 +38,17 @@ object StardimaApi {
         return if (poster.startsWith("http")) poster else STORAGE_URL + "/" + poster
     }
 
+    /**
+     * TMDB poster URLs are width-tagged (e.g. /t/p/w500/). The API returns
+     * w500 by default, which looks soft on TV. Swap the width token for a
+     * larger one so large surfaces (hero) stay sharp. Port of the Flutter
+     * helper of the same name.
+     */
+    fun upscalePoster(url: String, width: Int = 780): String {
+        val m = Regex("/t/p/w\\d+/").find(url) ?: return url
+        return url.replaceFirst(m.value, "/t/p/w$width/")
+    }
+
     private fun parseVideo(v: JSONObject): VideoItem {
         val url = v.optString("url", "")
         return VideoItem(
@@ -48,7 +59,8 @@ object StardimaApi {
             isSeries = v.optBoolean("is_series", false),
             year = v.optString("year", ""),
             description = v.optString("description", ""),
-            quality = v.optString("video_quality", "")
+            quality = v.optString("video_quality", ""),
+            backgroundUrl = resolvePoster(v.optString("background_url", ""))
         )
     }
 

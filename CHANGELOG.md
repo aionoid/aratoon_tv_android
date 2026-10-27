@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-10-27
+
+### Changed
+
+- Home hero reworked to match the Flutter reference exactly: the card now
+  shows a **sharp** hero image (never blurred) — full-bleed cover for
+  backdrops (`/b/`), or the whole poster sharp in a 2:3 box on the right —
+  with a surface card, 2dp white border, the left→right dark gradient
+  (0.62 → 0.30 → 0.05) and a 140px bottom fade. Posters are up-scaled to
+  `w780` (TMDB width token) so the hero stays sharp on TV
+- Hero text block moved to the top-left (clear of the poster), title is
+  extra-bold, description is white (3 lines)
+- Hero "Watch now" now reads **"Watch episode"** for series; the gold
+  button and the glass circle both open the item (Flutter `_openItem`)
+
+### Fixed
+
+- Hero "Watch now" did not respond to **touch** on tablets/phones: the
+  `tv-material` `Button` only handled D-pad ENTER. Swapped to
+  `material3.Button`, which handles both D-pad and touch
+- Hero always routed to the server screen, dead-ending for series
+  ("No servers available"). Series now open the **Series screen**
+  (Flutter `_openItem` behaviour); movies still open servers
+- Player: D-pad keys (incl. DOWN) could bubble to the nav host and pop
+  the player while the stream was still resolving or in the error state.
+  D-pad keys are now always consumed; only BACK exits
+- `VideoItem` now carries `backgroundUrl` (API `background_url`) and the
+  hero uses it when present
+
 ## [0.5.0] - 2026-10-25
 
 ### Added

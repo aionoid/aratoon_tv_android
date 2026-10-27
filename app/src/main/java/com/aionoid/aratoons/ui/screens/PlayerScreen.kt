@@ -238,31 +238,40 @@ fun PlayerScreen(url: String, title: String, poster: String, server: String? = n
             .focusRequester(focusRequester)
             .onKeyEvent { event ->
                 val native = event.nativeKeyEvent
-                if (native.action != KeyEvent.ACTION_DOWN || pstate != 1) return@onKeyEvent false
+                if (native.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                // D-pad keys are ALWAYS consumed (even while resolving or in
+                // the error state) so they don't bubble to the nav host and
+                // pop the player. BACK still passes through (else -> false).
                 when (native.keyCode) {
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                        if (buffering) return@onKeyEvent true
-                        if (isPlaying) player.pause() else player.play()
+                        if (pstate == 1) {
+                            if (buffering) return@onKeyEvent true
+                            if (isPlaying) player.pause() else player.play()
+                        }
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        if (durationMs > 0) {
+                        if (pstate == 1 && durationMs > 0) {
                             player.seekTo(minOf(player.currentPosition + 10_000, durationMs))
-                            true
-                        } else false
+                        }
+                        true
                     }
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        player.seekTo(maxOf(0L, player.currentPosition - 10_000))
+                        if (pstate == 1) {
+                            player.seekTo(maxOf(0L, player.currentPosition - 10_000))
+                        }
                         true
                     }
                     // Flutter player: UP shows the chrome, DOWN hides it
                     KeyEvent.KEYCODE_DPAD_UP -> {
-                        bumpControls()
+                        if (pstate == 1) bumpControls()
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        hideJob?.cancel()
-                        controlsVisible = false
+                        if (pstate == 1) {
+                            hideJob?.cancel()
+                            controlsVisible = false
+                        }
                         true
                     }
                     else -> false
