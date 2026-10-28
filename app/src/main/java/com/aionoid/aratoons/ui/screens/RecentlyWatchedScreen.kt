@@ -154,10 +154,12 @@ private fun RecentlyCard(
     Column(
         modifier = Modifier
             .width(168.dp)
+            // onFocusChanged before the focusable node — it only aggregates
+            // focus targets that follow it in the chain (see PosterCard)
+            .onFocusChanged { focused = it.hasFocus }
             .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
             .focusable()
             .clickable(interactionSource = null, indication = null) { onClick() }
-            .onFocusChanged { focused = it.hasFocus }
     ) {
         Box(
             modifier = Modifier

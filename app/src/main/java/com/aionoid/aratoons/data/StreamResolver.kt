@@ -1,6 +1,7 @@
 package com.aionoid.aratoons.data
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -27,6 +28,7 @@ import java.util.Locale
  */
 class StreamResolver(private val context: Context, private val http: OkHttpClient) {
 
+    private val logTag = "Resolver"
     private val hwBase = "https://v2.hyperwatching.com"
     private val webExtractor = WebViewStreamExtractor()
 
@@ -52,14 +54,25 @@ class StreamResolver(private val context: Context, private val http: OkHttpClien
         if (!url.startsWith("http")) url = StardimaApi.BASE_URL + url
         if ("hyperwatching" in url) return@withContext url
 
-        var starHtml = fetchText(url, mapOf("Referer" to StardimaApi.BASE_URL + "/"))
+        Log.d(logTag, "getEmbedUrl: $url")
+        var starHtml = try {
+            fetchText(url, mapOf("Referer" to StardimaApi.BASE_URL + "/"))
+        } catch (e: IOException) {
+            Log.d(logTag, "getEmbedUrl: fetch failed: ${e.message}")
+            return@withContext null
+        }
 
         // Movie detail pages redirect to /play/{id}
         if ("/movie/" in url && "/play/" !in url) {
             val movieId = Regex("/movie/([^?/]+)").find(url)?.groupValues?.get(1)
             if (movieId != null) {
                 url = StardimaApi.BASE_URL + "/play/$movieId"
-                starHtml = fetchText(url, mapOf("Referer" to StardimaApi.BASE_URL + "/"))
+                starHtml = try {
+                    fetchText(url, mapOf("Referer" to StardimaApi.BASE_URL + "/"))
+                } catch (e: IOException) {
+                    Log.d(logTag, "getEmbedUrl: /play fetch failed: ${e.message}")
+                    return@withContext null
+                }
             }
         }
 
@@ -98,6 +111,8 @@ class StreamResolver(private val context: Context, private val http: OkHttpClien
             }
         }
 
+        if (embedUrl == null) Log.d(logTag, "getEmbedUrl: no embed found for $url")
+        else Log.d(logTag, "getEmbedUrl: found $embedUrl")
         embedUrl
     }
 
@@ -108,26 +123,45 @@ class StreamResolver(private val context: Context, private val http: OkHttpClien
     private data class EmbedInfo(val hashid: String, val servers: List<ServerInfo>)
 
     private suspend fun fetchEmbedInfo(embedUrl: String, referer: String): EmbedInfo? {
+        Log.d(logTag, "fetchEmbedInfo: $embedUrl")
         val hwHtml = try {
             fetchText(embedUrl, mapOf("Referer" to referer))
-        } catch (_: IOException) {
+        } catch (e: IOException) {
+            Log.d(logTag, "fetchEmbedInfo: fetch failed: ${e.message}")
             return null
         }
-        val dataPage = Regex("data-page=\"([^\"]+)\"").find(hwHtml)?.groupValues?.get(1) ?: return null
+        val dataPage = Regex("data-page=\"([^\"]+)\"").find(hwHtml)?.groupValues?.get(1)
+        if (dataPage == null) {
+            Log.d(logTag, "fetchEmbedInfo: no data-page (html=${hwHtml.length}b)")
+            return null
+        }
         return try {
             val json = JSONObject(android.text.Html.fromHtml(dataPage, android.text.Html.FROM_HTML_MODE_LEGACY).toString())
-            val video = json.optJSONObject("props")?.optJSONObject("video") ?: return null
+            val video = json.optJSONObject("props")?.optJSONObject("video")
+            if (video == null) {
+                Log.d(logTag, "fetchEmbedInfo: no props.video")
+                return null
+            }
             val hashid = video.optString("hashid", "")
             val servers = ArrayList<ServerInfo>()
-            val arr = video.optJSONArray("servers") ?: return null
+            val arr = video.optJSONArray("servers")
+            if (arr == null) {
+                Log.d(logTag, "fetchEmbedInfo: no servers array")
+                return null
+            }
             for (i in 0 until arr.length()) {
                 val s = arr.optJSONObject(i) ?: continue
                 if (s.optInt("id", 0) == 0) continue
                 servers.add(ServerInfo(s.optString("name", ""), s.optInt("id", 0), s.optString("status", "")))
             }
-            if (hashid.isEmpty() || servers.isEmpty()) null
-            else EmbedInfo(hashid, servers)
-        } catch (_: Exception) {
+            if (hashid.isEmpty() || servers.isEmpty()) {
+                Log.d(logTag, "fetchEmbedInfo: empty hashid/servers")
+                null
+            } else EmbedInfo(hashid, servers).also {
+                Log.d(logTag, "fetchEmbedInfo: ${servers.size} servers")
+            }
+        } catch (e: Exception) {
+            Log.d(logTag, "fetchEmbedInfo: parse error: ${e.message}")
             null
         }
     }
@@ -184,9 +218,12 @@ class StreamResolver(private val context: Context, private val http: OkHttpClien
 
                 // --- Mixdrop: direct MP4 ---
                 if (server.name == "Mixdrop") {
+                    Log.d(logTag, "Mixdrop: watch=$watchUrl html=${playerHtml.length}b " +
+                        "evalHeader=${playerHtml.contains("eval(function(p,a,c,k,e,d)")}")
                     EvalDecoder.extractMixdropUrl(playerHtml)?.let { mp4 ->
                         return@withContext StreamResult(mp4, headers(mapOf("Referer" to origin(watchUrl))))
                     }
+                    Log.d(logTag, "Mixdrop: direct decode failed, falling through")
                 }
 
                 // --- StreamHG direct (hgplaycdn.com) ---

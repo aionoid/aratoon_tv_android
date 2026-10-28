@@ -1,5 +1,7 @@
 package com.aionoid.aratoons.data
 
+import android.util.Log
+
 /**
  * Decoders for the obfuscated JS eval() configs used by the streaming
  * servers (Mixdrop, StreamHG, Uqload, Earnvids, Lulustream, Goodstream).
@@ -9,6 +11,7 @@ package com.aionoid.aratoons.data
  */
 object EvalDecoder {
 
+    private const val TAG = "Mixdrop"
     private const val B36_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz"
 
     /** Same as JS `c.toString(36)`. */
@@ -71,29 +74,91 @@ object EvalDecoder {
      */
     fun decodeMixdrop(html: String): String? {
         val pos = html.indexOf("eval(function(p,a,c,k,e,d)")
-        if (pos < 0) return null
+        if (pos < 0) {
+            Log.d(TAG, "decodeMixdrop: no eval header (html=${html.length}b)")
+            return null
+        }
         val chunk = html.substring(pos, (pos + 300).coerceAtMost(html.length))
         val isIdentity = "return c}" in chunk && "toString" !in chunk
-        if (!isIdentity) return null
+        if (!isIdentity) {
+            Log.d(TAG, "decodeMixdrop: not identity header: " + chunk.substring(0, 120))
+            return null
+        }
 
-        val encStart = html.indexOf("}('", pos)
-        if (encStart < 0) return null
+        // jsdeflate call marker varies by build: "}('" (classic) or the
+        // "}'(" variant — accept whichever appears first after the header.
+        val i1 = html.indexOf("}'(", pos)
+        val i2 = html.indexOf("}('", pos)
+        val encStart = when {
+            i1 >= 0 && i2 >= 0 -> minOf(i1, i2)
+            i1 >= 0 -> i1
+            else -> i2
+        }
+        if (encStart < 0) {
+            Log.d(TAG, "decodeMixdrop: no call marker (i1=$i1 i2=$i2)")
+            return null
+        }
         val rest = html.substring(encStart + 3)
         val splitMarker = "'.split('|'),0,{}))"
         val splitPos = rest.indexOf(splitMarker)
-        if (splitPos < 0) return null
+        if (splitPos < 0) {
+            Log.d(TAG, "decodeMixdrop: no split close")
+            return null
+        }
         val callArgs = rest.substring(0, splitPos)
-        val close = Regex("',\\d+,(\\d+),'(.*)$").find(callArgs) ?: return null
+        val close = Regex("',\\d+,(\\d+),'(.*)$").find(callArgs)
+        if (close == null) {
+            Log.d(TAG, "decodeMixdrop: no close args; tail=" +
+                callArgs.substring(callArgs.length.coerceAtMost(200)))
+            return null
+        }
         val encoded = callArgs.substring(0, close.range.start)
         val count = close.groupValues[1].toIntOrNull() ?: return null
-        val keywords = close.groupValues[2].split("|")
+        var keywords = close.groupValues[2].split("|")
 
-        var decoded = encoded
-        for (i in count - 1 downTo 0) {
-            if (i >= keywords.size || keywords[i].isEmpty()) continue
-            val token = i.toString()
-            decoded = Regex("(?<![\\w])" + Regex.escape(token) + "(?![\\w])")
-                .replace(decoded, Regex.escape(keywords[i]))
+        // Rotated builds wrap every keyword fragment: "Q<frag>E" (the E
+        // suffix is dropped for fragments at the end of a value) and use
+        // "Q" as the joiner where the clean build uses "-". Unwrap the
+        // table before decoding so the output matches the clean form.
+        var wrapped = false
+        if (keywords.size > 2 && keywords[1].startsWith("Q") && keywords[1].endsWith("E")) {
+            wrapped = true
+            keywords = keywords.map {
+                var s = it
+                if (s.startsWith("Q")) s = s.substring(1)
+                if (s.length > 1 && s.endsWith("E")) s = s.substring(0, s.length - 1)
+                s
+            }
+            Log.d(TAG, "decodeMixdrop: unwrapped keyword table (kw[1]=${keywords[1]})")
+        }
+
+        // Single-pass digit-run substitution (equivalent to the JS
+        // per-keyword replace for clean builds, and required for wrapped
+        // builds where a "Q" joiner sits between adjacent tokens and
+        // breaks word-boundary regexes).
+        val sb = StringBuilder(encoded.length * 2)
+        var i = 0
+        while (i < encoded.length) {
+            val c = encoded[i]
+            if (c.isDigit()) {
+                var j = i
+                while (j < encoded.length && encoded[j].isDigit()) j++
+                val idx = encoded.substring(i, j).toIntOrNull()
+                if (idx != null && idx < keywords.size && keywords[idx].isNotEmpty()) {
+                    sb.append(keywords[idx])
+                } else {
+                    sb.append(encoded, i, j)
+                }
+                i = j
+            } else {
+                sb.append(c)
+                i++
+            }
+        }
+        var decoded = sb.toString()
+        if (wrapped) {
+            // Restore the "-" joiner the wrapped build replaced with "Q".
+            decoded = Regex("(?<=[A-Za-z0-9])Q(?=[A-Za-z0-9])").replace(decoded, "-")
         }
         return decoded
     }
@@ -102,17 +167,23 @@ object EvalDecoder {
      * Mixdrop: extract the direct MP4 URL from the embed page.
      */
     fun extractMixdropUrl(html: String): String? {
-      val decoded = decodeMixdrop(html) ?: return null
-      // Current pages store the file in MDCore.N assignments instead of wurl/furl.
-      val m = Regex("wurl[\"']?\\s*=\\s*\"([^\"]+\\.mp4[^\"]*)\"").find(decoded)
-          ?: Regex("furl[\"']?\\s*=\\s*\"([^\"]+\\.mp4[^\"]*)\"").find(decoded)
-          ?: Regex("MDCore\\.\\d+=\"([^\"]+\\.mp4[^\"]*)\"").find(decoded)
-          ?: return null
-      var mp4 = m.groupValues[1]
-      if (!mp4.startsWith("http")) {
-          mp4 = if (mp4.startsWith("//")) "https:$mp4" else "https://$mp4"
-      }
-      return mp4
+        val decoded = decodeMixdrop(html) ?: return null
+        // The MP4 reference may appear as wurl/furl/MDCore.N with either
+        // quote style.
+        val m = Regex("wurl[\"']?\\s*=\\s*[\"']([^\"']+\\.mp4[^\"']*)[\"']").find(decoded)
+            ?: Regex("furl[\"']?\\s*=\\s*[\"']([^\"']+\\.mp4[^\"']*)[\"']").find(decoded)
+            ?: Regex("MDCore\\.\\d+=[\"']([^\"']+\\.mp4[^\"']*)[\"']").find(decoded)
+            ?: run {
+                Log.d(TAG, "extractMixdropUrl: decoded ${decoded.length}b but no mp4 ref; " +
+                    "head=" + decoded.substring(0, 200))
+                return null
+            }
+        var mp4 = m.groupValues[1]
+        if (!mp4.startsWith("http")) {
+            mp4 = if (mp4.startsWith("//")) "https:$mp4" else "https://$mp4"
+        }
+        Log.d(TAG, "extractMixdropUrl: $mp4")
+        return mp4
     }
 
     /**

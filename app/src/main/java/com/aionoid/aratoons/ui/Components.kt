@@ -18,7 +18,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -48,6 +50,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -72,6 +75,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -88,12 +92,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.navigation.NavHostController
+import androidx.navigation.NavOptionsBuilder
 import androidx.tv.material3.Button
 import androidx.tv.material3.Card
 import coil.Coil
@@ -238,6 +245,15 @@ fun TopBarOverlay(
                     color = MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(18.dp)
                 )
+                // Touch: tapping the icon/padding area runs the search when
+                // there is a query, otherwise focuses the field (the field
+                // itself consumes taps on its own area).
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        val q = query.trim()
+                        if (q.isNotEmpty()) onSearch(q) else searchFocus.requestFocus()
+                    })
+                }
                 .padding(start = 12.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -248,19 +264,37 @@ fun TopBarOverlay(
                 modifier = Modifier.size(16.dp)
             )
             Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
+            // Plain field (no M3 box): an OutlinedTextField forced into the
+            // 36dp pill was clipped to half its height, so typed text only
+            // showed half. IME search/Done (hardware OK and the soft
+            // keyboard alike) run the search with the current query.
+            BasicTextField(
                 value = query,
                 onValueChange = { query = it },
                 singleLine = true,
-                placeholder = {
-                    Text(
-                        stringResource(R.string.search_hint),
-                        style = TextStyle(fontSize = 12.sp),
-                        color = Color(0xFFBDBDBD)
-                    )
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        if (query.isEmpty()) {
+                            Text(
+                                stringResource(R.string.search_hint),
+                                style = TextStyle(fontSize = 12.sp),
+                                color = Color(0xFFBDBDBD)
+                            )
+                        }
+                        innerTextField()
+                    }
                 },
                 textStyle = TextStyle(fontSize = 13.sp, color = Color.White),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
+                    onSearch = {
+                        val q = query.trim()
+                        if (q.isNotEmpty()) onSearch(q)
+                    },
                     onDone = {
                         val q = query.trim()
                         if (q.isNotEmpty()) onSearch(q)
@@ -283,6 +317,13 @@ fun TopBarOverlay(
                                 heroFocus.requestFocus()
                                 true
                             }
+                            // Nothing above or to the right of the search pill —
+                            // consume so the default (nearest-element) traversal
+                            // can't jump focus somewhere unexpected. When the
+                            // field holds text, let the default handle it
+                            // (cursor movement).
+                            Key.DirectionUp -> query.isEmpty()
+                            Key.DirectionRight -> query.isEmpty()
                             else -> false
                         }
                     }
@@ -454,19 +495,28 @@ private fun SideNavEntry(
                 color = if (active == key) gold.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.10f),
                 shape = shape
             )
+            // onFocusChanged must sit OUTSIDE the focusable node: it only
+            // aggregates focus targets that follow it in the chain, so
+            // placing it after clickable() never reported the item's focus
+            .onFocusChanged { focused = it.hasFocus }
             .then(navEntry?.let { Modifier.focusRequester(it) } ?: Modifier)
             .focusable()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                if (event.key == Key.DirectionRight) {
-                    contentEntry.requestFocus()
-                    true
-                } else {
-                    false
+                when (event.key) {
+                    // RIGHT leaves the menu for the content entry point
+                    Key.DirectionRight -> {
+                        contentEntry.requestFocus()
+                        true
+                    }
+                    // Nothing to the left of the nav column — consume so the
+                    // default traversal can't jump focus unexpectedly
+                    Key.DirectionLeft -> true
+                    // UP/DOWN: default traversal moves between menu items
+                    else -> false
                 }
             }
             .clickable(interactionSource = null, indication = null) { onNavigate(key) }
-            .onFocusChanged { focused = it.hasFocus }
             .padding(start = 16.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -497,8 +547,13 @@ private fun SideNavEntry(
  * title on top and a row of 88dp-wide poster cards. No arrow buttons —
  * the D-pad drives horizontal/vertical rail focus, crossing rail
  * boundaries explicitly: UP at the top rail goes to the hero, LEFT at the
- * leftmost card of the top rail goes to the side nav, and UP/DOWN between
- * rails move to the same card index of the neighbouring rail (clamped).
+ * leftmost card of the top rail goes to the hero (other rails: side nav),
+ * UP/DOWN between rails move to the same card index of the neighbouring
+ * rail (clamped), RIGHT at the rightmost card wraps around to the
+ * leftmost (ring, standard TV carousel), and DOWN on the bottom rail is a
+ * consumed no-op so focus never falls into the default nearest-element
+ * traversal (see android.com/training/tv/get-started/navigation +
+ * "Android TV D-pad Navigation Handling in Jetpack Compose").
  */
 @Composable
 fun ContentRail(
@@ -539,7 +594,16 @@ fun ContentRail(
         ) {
             itemsIndexed(items, key = { _, item -> item.url + item.title + item.id }) { index, item ->
                 val nodeKey = railIndex * 1000 + index
-                val fr = remember { cardNodes.putIfAbsent(nodeKey, FocusRequester()) }
+                val fr = remember { FocusRequester() }
+                // Keep [cardNodes] holding ONLY currently-composed requesters:
+                // requestFocus() on a requester whose node left composition
+                // throws IllegalStateException ("FocusRequester is not
+                // initialized"), which crashed the app when a D-pad key
+                // targeted a card in a rail below the fold.
+                DisposableEffect(fr) {
+                    cardNodes[nodeKey] = fr
+                    onDispose { cardNodes.remove(nodeKey) }
+                }
                 PosterCard(
                     item = item,
                     onClick = { onItem(item) },
@@ -550,17 +614,23 @@ fun ContentRail(
                         fun focusCard(key: Int) {
                             val node = cardNodes[key]
                             if (node != null) {
+                                android.util.Log.d("FocusMap", "focusCard rail=${key / 1000} idx=${key % 1000} DIRECT")
                                 node.requestFocus()
                             } else {
-                                // Card not composed yet: scroll its rail, then focus.
+                                android.util.Log.d("FocusMap", "focusCard rail=${key / 1000} idx=${key % 1000} COROUTINE(not-composed)")
+                                // Card not composed yet (rail below/above the
+                                // fold): first scroll the vertical column so
+                                // the target rail is composed, then scroll
+                                // the rail so the target card is composed,
+                                // then focus it.
+                                val targetRail = key / 1000
                                 val target = key % 1000
-                                val rs = railStates[key / 1000]
-                                rs?.let {
-                                    scope.launch {
-                                        it.scrollToItem(target)
-                                        delay(60)
-                                        cardNodes[key]?.requestFocus()
-                                    }
+                                scope.launch {
+                                    railColumnState?.scrollToItem(targetRail)
+                                    delay(120)
+                                    railStates[targetRail]?.scrollToItem(target)
+                                    delay(80)
+                                    cardNodes[key]?.requestFocus()
                                 }
                             }
                         }
@@ -583,7 +653,11 @@ fun ContentRail(
                                 focusCard(nodeKey + 1)
                                 true
                             } else {
-                                false
+                                // Wrap-around (ring): rightmost card -> leftmost
+                                // card, so focus never falls off the rail edge
+                                // into the default (nearest-element) traversal
+                                focusCard(railIndex * 1000)
+                                true
                             }
                             Key.DirectionUp -> when {
                                 railIndex == 0 -> {
@@ -599,13 +673,18 @@ fun ContentRail(
                                 focusCard((railIndex + 1) * 1000 + index.coerceIn(0, nextCount - 1))
                                 true
                             } else {
-                                false
+                                // Bottom rail: nothing below. Consume the key so
+                                // the default traversal can't wrap focus to the
+                                // top of the screen (predictable dead end, no
+                                // infinite loop)
+                                true
                             }
                             else -> false
                         }
                     },
                     onFocus = { hasFocus ->
                         if (hasFocus) {
+                            android.util.Log.d("FocusMap", "CARD focus rail=$railIndex idx=$index")
                             // Keep the focused card visible in its rail…
                             val first = state.firstVisibleItemIndex
                             val visible = state.layoutInfo.visibleItemsInfo.size
@@ -654,19 +733,21 @@ fun BlurredImage(
         repeat(4) { attempt ->
             if (bmp != null) return@LaunchedEffect
             try {
+                // Cap the load at 900px (Flutter: memCacheWidth 900) — the
+                // raw hero posters are only a few hundred px wide, and a
+                // full-size load + heavy downsample is what made the
+                // background look pixelated.
                 val drawable = Coil.imageLoader(context).execute(
-                    ImageRequest.Builder(context).data(model).build()
+                    ImageRequest.Builder(context)
+                        .data(model)
+                        .size(900, 900)
+                        .build()
                 ).drawable
-                android.util.Log.d("BlurredImage", "loaded: $drawable for $model")
                 bmp = (drawable as? BitmapDrawable)?.bitmap?.let {
                     prepareBlurZone(it, blurRadius, rampStart, rampFull, darkColor.toArgb(), fullFrame)
                 }
             } catch (e: Exception) {
-                android.util.Log.w("BlurredImage", "attempt $attempt failed for $model", e)
                 bmp = null
-            }
-            if (bmp != null) {
-                android.util.Log.d("BlurredImage", "prepared ${bmp!!.width}x${bmp!!.height}")
             }
             if (bmp == null && attempt < 3) delay(2000)
         }
@@ -677,7 +758,9 @@ fun BlurredImage(
         // ContentScale.Crop, centered — the size MUST be passed explicitly,
         // otherwise drawImage uses the bitmap's native (tiny) size while the
         // offset assumes the scaled size, painting off-screen (all-black bg).
-        val s = max(size.width / b.width, size.height / b.height)
+        // The extra 12% (Flutter: Transform.scale(1.15)) pushes the
+        // BlurMaskFilter's transparent edge fade off-screen.
+        val s = max(size.width / b.width, size.height / b.height) * 1.12f
         val dw = (b.width * s).toInt().coerceAtLeast(1)
         val dh = (b.height * s).toInt().coerceAtLeast(1)
         val dx = ((size.width - b.width * s) / 2f).toInt()
@@ -717,7 +800,9 @@ private fun prepareBlurZone(
     } else {
         src
     }
-    val scale = 4f
+    // 1/2 scale (was 1/4): the blur radius is then proportional to the
+    // upscaled display size, so the result stays smooth instead of pixelated.
+    val scale = 2f
     val w = (srcSw.width / scale).toInt().coerceAtLeast(1)
     val h = (srcSw.height / scale).toInt().coerceAtLeast(1)
     val small = Bitmap.createScaledBitmap(srcSw, w, h, true)
@@ -792,14 +877,19 @@ fun PosterCard(
                     )
                 }
             }
+            // Observe focus from OUTSIDE the focusable node: onFocusChanged
+            // only aggregates focus targets that follow it in the chain, so
+            // it must come before focusRequester/clickable or `active`
+            // (zoom, glow, scroll-into-view) never turns on
+            .onFocusChanged {
+                android.util.Log.d("FocusMap", "PosterCard focusChanged hasFocus=${it.hasFocus} item=${item.title.take(24)}")
+                active = it.hasFocus
+                onFocus?.invoke(it.hasFocus)
+            }
             // clickable() so D-pad CENTER opens the item
             .focusRequester(focusRequester)
             .then(onKey?.let { Modifier.onKeyEvent(it) } ?: Modifier)
             .clickable(interactionSource = null, indication = null) { onClick() }
-            .onFocusChanged {
-                active = it.hasFocus
-                onFocus?.invoke(it.hasFocus)
-            }
     ) {
         Box(
             modifier = Modifier
@@ -950,10 +1040,17 @@ fun PageDropdown(
 
 /**
  * Hero carousel dots (stardima_tv_flutter): small white dots, the active
- * one stretched into a gold pill.
+ * one stretched into a gold pill. Each dot is tappable ([onSelect]) so
+ * touch users can jump to any poster — the D-pad already cycles on the
+ * hero itself.
  */
 @Composable
-fun HeroDots(count: Int, index: Int, modifier: Modifier = Modifier) {
+fun HeroDots(
+    count: Int,
+    index: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -962,15 +1059,24 @@ fun HeroDots(count: Int, index: Int, modifier: Modifier = Modifier) {
             val current = i == index
             Box(
                 modifier = Modifier
-                    .animateContentSize()
                     .width(if (current) 18.dp else 6.dp)
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(
-                        if (current) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.35f),
-                        RoundedCornerShape(3.dp)
-                    )
-            )
+                    .height(24.dp) // tall tap target for touch
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(interactionSource = null, indication = null) { onSelect(i) },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .animateContentSize()
+                        .width(if (current) 18.dp else 6.dp)
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(
+                            if (current) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.35f),
+                            RoundedCornerShape(3.dp)
+                        )
+                )
+            }
         }
     }
 }
@@ -1015,7 +1121,13 @@ fun CatalogPageBar(
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 } else {
-                    CatalogPageNumber(p, p == page, onClick = { onPage(p) })
+                    // 4dp on each side = 8dp gap between the number tiles
+                    CatalogPageNumber(
+                        p,
+                        p == page,
+                        onClick = { onPage(p) },
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
                 }
             }
         }
@@ -1067,8 +1179,9 @@ private fun CatalogPageArrow(
                 if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f),
                 shape
             )
-            .clickable(interactionSource = null, indication = null, enabled = enabled) { onClick() }
-            .onFocusChanged { focused = it.hasFocus },
+            // onFocusChanged before clickable() — see PosterCard
+            .onFocusChanged { focused = it.hasFocus }
+            .clickable(interactionSource = null, indication = null, enabled = enabled) { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -1110,8 +1223,9 @@ private fun CatalogPageNumber(
                 if (current) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f),
                 shape
             )
-            .clickable(interactionSource = null, indication = null) { onClick() }
-            .onFocusChanged { focused = it.hasFocus },
+            // onFocusChanged before clickable() — see PosterCard
+            .onFocusChanged { focused = it.hasFocus }
+            .clickable(interactionSource = null, indication = null) { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -1159,8 +1273,9 @@ fun ActionPill(
                 color = goldColor,
                 shape = shape
             )
-            .clickable(interactionSource = null, indication = null) { onClick() }
+            // onFocusChanged before clickable() — see PosterCard
             .onFocusChanged { focused = it.hasFocus }
+            .clickable(interactionSource = null, indication = null) { onClick() }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)

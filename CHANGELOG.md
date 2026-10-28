@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-10-28
+
+### Added
+
+- **Server selection**: when an item opens, all available streaming
+  servers are now listed by name (e.g. Mixdrop, Uqload, Lulustream,
+  Streamhg, Savefiles) as focusable pills, with a hint that speed,
+  languages and quality can differ per server. You pick the server
+  explicitly before playback instead of auto-landing on the first one
+- **Movies rail** on the home screen, alongside Recently Watched,
+  Popular and Series
+- **Isolated WebView extraction**: the headless WebView that decodes
+  JS-protected server embeds now runs in its own `:wv` process
+  (`WebViewExtractService`). If the vendor System WebView FATALs during
+  init on a TV box, only that process dies and extraction falls back
+  gracefully instead of killing the app
+- **Hero navigation**: ← / → on the featured item switches it (and the
+  full-screen background); ← at the first hero goes to the side nav,
+  → at the last hero goes to the search field. The hero also
+  auto-advances every 7 s like a carousel
+- **Full D-pad topology**: DOWN from the hero lands on the first rail
+  card; UP/DOWN between rails crosses to the same card index of the
+  neighbouring rail (clamped); LEFT at the leftmost card of the top
+  rail goes back to the hero; RIGHT at the rightmost card wraps around
+  to the leftmost
+
+### Changed
+
+- `EvalDecoder` now handles both the classic and the rotated
+  `eval()`/jsdeflate builds used by the Mixdrop-family servers (fixed
+  a build that changed the call marker and broke MP4 extraction)
+- `StreamResolver` resolves the **full server list** from the embed
+  page's `data-page` JSON (was: single-server heuristic) and logs the
+  whole resolution chain under the `Resolver` tag for debugging
+- The headless extractor is now an orchestrator: `WebViewStreamExtractor`
+  talks to the `:wv` service over a broadcast and returns null on
+  timeout instead of hanging
+
+### Fixed
+
+- **Focus tracking broken app-wide**: `onFocusChanged` was attached
+  *after* `clickable()`/`focusable()` in the modifier chain, but it
+  only aggregates focus targets that follow it in the chain — so the
+  card zoom/glow, side-nav highlight, page-number highlight, pill
+  highlight and the hero's "a card has focus" state never turned on.
+  Moved before the focusable node in all 8 affected composables
+- LEFT/DOWN/RIGHT key presses aimed at the hero could be swallowed by a
+  nearby card, making the hero appear to ignore the D-pad
+- `getEmbedUrl` / `fetchEmbedInfo` no longer crash the resolver on a
+  network error — the failure is logged and the item falls back to the
+  next resolution path
+
 ## [0.7.0] - 2026-10-27
 
 ### Added

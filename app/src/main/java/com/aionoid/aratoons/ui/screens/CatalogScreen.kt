@@ -630,9 +630,11 @@ fun CatalogListItem(
                 },
                 shape = shape
             )
+            // onFocusChanged before clickable() — it only aggregates focus
+            // targets that follow it in the chain (see PosterCard)
+            .onFocusChanged { if (it.hasFocus) onFocus() }
             // clickable() so D-pad CENTER opens the item
             .clickable(interactionSource = null, indication = null) { onClick() }
-            .onFocusChanged { if (it.hasFocus) onFocus() }
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)

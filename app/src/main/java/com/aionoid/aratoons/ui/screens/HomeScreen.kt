@@ -76,11 +76,16 @@ import kotlinx.coroutines.launch
  *    (0.42 of the screen height, clamped 230–320dp) and the rails
  *    (Recently / Popular / Series) in one vertical scroll.
  *
- * D-pad: ← / → on the hero switches the featured item (and the
- * full-screen background); UP from the hero goes to the search field;
- * DOWN lands on the first rail card. UP/DOWN between rails crosses the
- * rail boundary to the same card index of the neighbouring rail; LEFT
- * at the leftmost card of the top rail goes to the side nav.
+ * D-pad (deterministic — every edge is handled explicitly, no default
+ * nearest-element traversal, per android.com/training/tv/get-started/
+ * navigation): ← / → on the hero switches the featured item (and the
+ * full-screen background); ← at the first hero goes to the side nav, → at
+ * the last hero goes to the search field; UP from the hero goes to the
+ * search field; DOWN lands on the first rail card. UP/DOWN between rails
+ * crosses the rail boundary to the same card index of the neighbouring
+ * rail (clamped); LEFT at the leftmost card of the top rail goes to the
+ * hero (other rails: side nav); RIGHT at the rightmost card wraps around
+ * to the leftmost (ring); DOWN on the bottom rail is a consumed no-op.
  */
 @Composable
 fun HomeScreen(navController: NavHostController) {
@@ -89,6 +94,7 @@ fun HomeScreen(navController: NavHostController) {
 
     var featured by remember { mutableStateOf<List<VideoItem>?>(null) }
     var recent by remember { mutableStateOf<List<VideoItem>?>(null) }
+    var allMovies by remember { mutableStateOf<List<VideoItem>?>(null) }
     var allSeries by remember { mutableStateOf<List<VideoItem>?>(null) }
     var error by remember { mutableStateOf(false) }
     var loadKey by remember { mutableStateOf(0) }
@@ -102,22 +108,36 @@ fun HomeScreen(navController: NavHostController) {
     val railColumnState = remember { androidx.compose.foundation.lazy.LazyListState() }
 
     LaunchedEffect(loadKey) {
-        featured = null; recent = null; allSeries = null
+        featured = null; recent = null; allMovies = null; allSeries = null
         error = false; heroIndex = 0
         try {
             // Recently watched comes from prefs — show it while network loads
             recent = RecentlyWatched.load(context).toItems()
-            // Network: "الرائج" (Popular) home-page carousel + first series page
-            val (pop, seriesPage) = coroutineScope {
+            // Network: "الرائج" (Popular) carousel + first movies page +
+            // first series page (rails)
+            val (pop, moviesPage, seriesPage) = coroutineScope {
                 val pJob = async { StardimaApi.popular(app.http) }
+                val mJob = async { StardimaApi.catalog(app.http, "/aflam", 1) }
                 val sJob = async { StardimaApi.catalog(app.http, "/mosalsalat", 1) }
-                Pair(pJob.await(), sJob.await().first)
+                Triple(pJob.await(), mJob.await().first, sJob.await().first)
             }
             featured = pop
+            allMovies = moviesPage
             allSeries = seriesPage
         } catch (e: Exception) {
             android.util.Log.e("HomeScreen", "load failed: $e", e)
             error = true
+        }
+    }
+
+    // Hero auto-advance: cycle the carousel on its own (wraps around, like
+    // Flutter's _cycleHero). Keyed on heroIndex so any manual change
+    // (D-pad / dot tap) restarts the full interval.
+    LaunchedEffect(featured, heroIndex) {
+        val count = featured?.size ?: 0
+        if (count > 1) {
+            delay(7000)
+            heroIndex = (heroIndex + 1) % count
         }
     }
 
@@ -152,20 +172,32 @@ fun HomeScreen(navController: NavHostController) {
         }
     }
 
-    // Rails in the Flutter order: Recently (if any), Popular, Series.
+    // Rails: Recently (if any), Popular, Movies, Series. Handlers are built
+    // in parallel with the rails (the list is conditional, so a fixed
+    // handler list would misalign when Recently is absent).
     val rails = buildList {
         val rec = recent
         if (rec != null && rec.isNotEmpty()) add(stringResource(R.string.recently_watched) to rec)
         val feat = featured
         if (feat != null && feat.isNotEmpty()) add(stringResource(R.string.popular) to feat)
+        val mov = allMovies
+        if (mov != null && mov.isNotEmpty()) add(moviesLabel to mov)
         val ser = allSeries
         if (ser != null && ser.isNotEmpty()) add(seriesLabel to ser)
     }
-    val railHandlers = listOf(
-        { it: VideoItem -> recentOnClick(it) },
-        { it: VideoItem -> movieOnClick(it) },
-        { it: VideoItem -> seriesOnClick(it) }
-    )
+    val railHandlers = buildList {
+        val rec = recent
+        if (rec != null && rec.isNotEmpty()) add { it: VideoItem -> recentOnClick(it) }
+        val feat = featured
+        // Popular mixes movies and series — route by item type.
+        if (feat != null && feat.isNotEmpty()) add { it: VideoItem ->
+            if (it.isSeries) seriesOnClick(it) else movieOnClick(it)
+        }
+        val mov = allMovies
+        if (mov != null && mov.isNotEmpty()) add { it: VideoItem -> movieOnClick(it) }
+        val ser = allSeries
+        if (ser != null && ser.isNotEmpty()) add { it: VideoItem -> seriesOnClick(it) }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Layer 0: full-screen blurred hero background
@@ -249,8 +281,16 @@ fun HomeScreen(navController: NavHostController) {
                             .border(2.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(20.dp))
                             .focusable()
                             .focusRequester(heroFocus)
+                            // Touch: tapping the hero card (image area) opens
+                            // the item — the inner buttons/dots consume taps
+                            // on themselves first. D-pad CENTER on the focused
+                            // card also activates this (Flutter: OK opens).
+                            .clickable(interactionSource = null, indication = null) {
+                                hero?.let { heroOpen(it) }
+                            }
                             .onKeyEvent { keyEvent ->
                                 if (keyEvent.type != KeyEventType.KeyDown) return@onKeyEvent false
+                                android.util.Log.d("FocusMap", "HERO key=${keyEvent.key}")
                                 when (keyEvent.key) {
                                     Key.DirectionLeft -> when {
                                         heroCount > 1 && heroIndex > 0 -> {
@@ -267,7 +307,13 @@ fun HomeScreen(navController: NavHostController) {
                                             heroIndex += 1
                                             true
                                         }
-                                        else -> false
+                                        // Last featured item: go to the search
+                                        // field (top-right) explicitly instead of
+                                        // letting the default traversal decide
+                                        else -> {
+                                            searchFocus.requestFocus()
+                                            true
+                                        }
                                     }
                                     Key.DirectionUp -> {
                                         searchFocus.requestFocus()
@@ -444,6 +490,7 @@ fun HomeScreen(navController: NavHostController) {
                                         HeroDots(
                                             count = heroCount,
                                             index = heroIndex,
+                                            onSelect = { i -> heroIndex = i },
                                             modifier = Modifier.padding(top = 12.dp)
                                         )
                                     }
