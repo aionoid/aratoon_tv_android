@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Home preview is now full-bleed (edge-to-edge) and flush with the top of
+  the content area — it starts immediately under the tab bar with no gap
+  (immersive-list anatomy). The 20dp inset now applies to the rails only
+
 ## [0.9.0] - 2026-10-29
 
 ### Added

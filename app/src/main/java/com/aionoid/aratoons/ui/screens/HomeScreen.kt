@@ -190,14 +190,11 @@ fun HomeScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-            // Clear gap below the top tab bar so the cinematic preview never
-            // visually touches (or overlaps) it.
-            Spacer(Modifier.height(8.dp))
-            // Immersive preview: full-bleed cinematic background + content
-            // block. Height ~42% of the available area (clamped) — a touch
-            // shorter than before so the preview sits well below the tab bar
-            // and the content block has headroom.
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Immersive preview: full width, flush to the top of the content
+            // area — right under the tab bar, no gap. The preview area is a
+            // fixed-height strip at the top of the screen (immersive-list
+            // anatomy), ~42% of the home viewport, clamped.
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val previewH = (maxHeight * 0.42f).coerceIn(200.dp, 360.dp)
                 Box(
@@ -206,11 +203,10 @@ fun HomeScreen(
                         // Clip the preview to its bounds: the 1.45x over-crop
                         // of the background (per the Android TV "Composition"
                         // guideline) is otherwise drawn outside the box —
-                        // Compose does not clip graphicsLayer overflow — and
-                        // the bleed covers the tab bar above and the rail
-                        // below. The old (good) design clipped the hero card
-                        // for exactly this reason.
-                        .clip(RoundedCornerShape(16.dp))
+                        // Compose does not clip graphicsLayer overflow. A zero
+                        // corner radius is a plain rectangle clip — the preview
+                        // is full-bleed and flush to the screen edges.
+                        .clip(RoundedCornerShape(0.dp))
                 ) {
                     ImmersivePreview(
                         item = previewItem,
@@ -240,11 +236,12 @@ fun HomeScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            // Rails in one vertical scroll (same as the old home).
+            // Rails in one vertical scroll (same as the old home); the 20dp
+            // padding that used to come from the outer Column is now on the
+            // list itself.
             LazyColumn(
                 state = railColumnState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 rails.forEachIndexed { railIdx, (railTitle, railItems) ->
