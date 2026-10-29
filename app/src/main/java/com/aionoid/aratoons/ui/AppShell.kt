@@ -1,5 +1,6 @@
 package com.aionoid.aratoons.ui
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -290,13 +291,16 @@ private fun TabItem(
         targetValue = if (focused && !selected) 1.05f else 1f,
         animationSpec = spring(dampingRatio = 0.72f)
     )
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(22.dp)
     Row(
         modifier = modifier
-            .height(40.dp)
-            // No fixed min width: unselected tabs are icon-only, the selected
-            // tab expands to icon + text.
-            .padding(horizontal = 10.dp, vertical = 3.dp)
+            // Smoothly animate the tab width as it expands/collapses
+            // (icon-only <-> icon + text).
+            .animateContentSize()
+            .height(44.dp)
+            // Generous internal padding so the icon and the label never stick
+            // to the pill edge.
+            .padding(horizontal = 14.dp, vertical = 5.dp)
             .scale(scale)
             .clip(shape)
             .background(if (selected) gold else Color.Transparent, shape)

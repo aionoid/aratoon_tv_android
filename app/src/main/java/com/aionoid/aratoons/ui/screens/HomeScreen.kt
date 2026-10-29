@@ -191,11 +191,27 @@ fun HomeScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+            // Clear gap below the top tab bar so the cinematic preview never
+            // visually touches (or overlaps) it.
+            Spacer(Modifier.height(8.dp))
             // Immersive preview: full-bleed cinematic background + content
-            // block. Height ~48% of the available area (clamped).
+            // block. Height ~42% of the available area (clamped) — a touch
+            // shorter than before so the preview sits well below the tab bar
+            // and the content block has headroom.
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val previewH = (maxHeight * 0.48f).coerceIn(230.dp, 420.dp)
-                Box(modifier = Modifier.height(previewH)) {
+                val previewH = (maxHeight * 0.42f).coerceIn(200.dp, 360.dp)
+                Box(
+                    modifier = Modifier
+                        .height(previewH)
+                        // Clip the preview to its bounds: the 1.45x over-crop
+                        // of the background (per the Android TV "Composition"
+                        // guideline) is otherwise drawn outside the box —
+                        // Compose does not clip graphicsLayer overflow — and
+                        // the bleed covers the tab bar above and the rail
+                        // below. The old (good) design clipped the hero card
+                        // for exactly this reason.
+                        .clip(RoundedCornerShape(16.dp))
+                ) {
                     ImmersivePreview(
                         item = previewItem,
                         count = previewCount,

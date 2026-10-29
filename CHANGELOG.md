@@ -21,7 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   corner (the Android TV "Composition" guideline), with the content block
   (title + description) over a legible scrim. The hero Play/Add buttons and
   carousel dots are gone — the hero is a single tappable/focusable preview
-  area. Tapping or focusing a rail card sets the hero
+  area. Tapping or focusing a rail card sets the hero. The preview is set
+  back from the tab bar and clipped to its bounds, so the over-cropped
+  background (scaled per the "Composition" guideline) can never bleed into
+  it
 - **Rail focus wiring**: `ContentRail` routes LEFT/RIGHT to cycle cards,
   UP from the top rail to the preview, DOWN from the bottom rail to the
   tab bar, and crosses rails at the same card index (clamped)
@@ -37,7 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The old home "side-nav + hero + 3 rails" layout is gone; the preview is
   now full-width at the top (immersive-list) instead of a top-left block
 - **Centered icon tabs**: the top tab bar is now centered; each tab is an
-  icon-only button that expands to icon + text only when selected (gold pill)
+  icon-only button that expands to icon + text only when selected (gold pill).
+  The expand/collapse is animated, and the tabs use generous internal padding
+  so the icon and label never stick to the pill edge
 
 ### Added
 
