@@ -45,11 +45,11 @@ import com.aionoid.aratoons.ui.systemBarsContentPadding
  * grid of 168x288 poster cards (poster + title + type).
  */
 @Composable
-fun RecentlyWatchedScreen(navController: NavHostController) {
+fun RecentlyWatchedScreen(navController: NavHostController, focusEntry: FocusRequester? = null) {
     val context = LocalContext.current
     var entries by remember { mutableStateOf<List<RecentlyWatched.Entry>?>(null) }
     var loadKey by remember { mutableStateOf(0) }
-    val firstFocus = remember { FocusRequester() }
+    val firstFocus = focusEntry ?: remember { FocusRequester() }
 
     LaunchedEffect(loadKey) {
         entries = RecentlyWatched.load(context)
@@ -57,10 +57,8 @@ fun RecentlyWatchedScreen(navController: NavHostController) {
 
     val list = entries ?: emptyList()
 
-    // Leanback: start focus on the first card once data is in
-    LaunchedEffect(entries) {
-        if (list.isNotEmpty()) firstFocus.requestFocus()
-    }
+    // Focus is managed by the shell via focusEntry; this screen does not
+    // auto-request focus on its own.
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 168.dp),

@@ -6,7 +6,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.aionoid.aratoons.ui.screens.CatalogScreen
-import com.aionoid.aratoons.ui.screens.HomeScreen
 import com.aionoid.aratoons.ui.screens.PlayerScreen
 import com.aionoid.aratoons.ui.screens.RecentlyWatchedScreen
 import com.aionoid.aratoons.ui.screens.SearchScreen
@@ -55,7 +54,10 @@ fun AraToonsNavHost() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
-            HomeScreen(navController)
+            // AraToonsShell hosts the tab bar (tabs) + the selected tab's
+            // content, which slides between tabs. Item-level navigation
+            // (servers/player/series) pushes on top of the shell.
+            AraToonsShell(navController)
         }
         composable(Routes.CATALOG) { back ->
             CatalogScreen(

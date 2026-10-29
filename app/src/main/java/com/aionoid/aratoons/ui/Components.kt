@@ -168,392 +168,18 @@ fun ScreenTitle(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-@Composable
-fun SideNavItem(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(44.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 20.dp, end = 16.dp)
-            )
-        }
-    }
-}
-
-/**
- * Top bar (stardima_tv_flutter TopBar): the screen title on the left and
- * a gold-bordered search pill on the right. The pill holds an in-place
- * text field — type and press OK to jump to the search screen. D-pad:
- * LEFT (cursor at start) goes to the side nav, DOWN to the hero.
- */
-@Composable
-fun TopBarOverlay(
-    title: String,
-    onSearch: (String) -> Unit,
-    searchFocus: FocusRequester,
-    navEntry: FocusRequester,
-    heroFocus: FocusRequester,
-    modifier: Modifier = Modifier
-) {
-    var query by rememberSaveable { mutableStateOf("") }
-    var fieldFocused by remember { mutableStateOf(false) }
-    val searchScale by animateFloatAsState(
-        targetValue = if (fieldFocused) 1.03f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f)
-    )
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(44.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 20.sp
-            ),
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
-        Row(
-            modifier = Modifier
-                .width(220.dp)
-                .height(36.dp)
-                .scale(searchScale)
-                .clip(RoundedCornerShape(18.dp))
-                .background(Color.Black.copy(alpha = 0.30f), RoundedCornerShape(18.dp))
-                .border(
-                    width = 1.5.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(18.dp)
-                )
-                // Touch: tapping the icon/padding area runs the search when
-                // there is a query, otherwise focuses the field (the field
-                // itself consumes taps on its own area).
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = {
-                        val q = query.trim()
-                        if (q.isNotEmpty()) onSearch(q) else searchFocus.requestFocus()
-                    })
-                }
-                .padding(start = 12.dp, end = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = stringResource(R.string.search),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            // Plain field (no M3 box): an OutlinedTextField forced into the
-            // 36dp pill was clipped to half its height, so typed text only
-            // showed half. IME search/Done (hardware OK and the soft
-            // keyboard alike) run the search with the current query.
-            BasicTextField(
-                value = query,
-                onValueChange = { query = it },
-                singleLine = true,
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        if (query.isEmpty()) {
-                            Text(
-                                stringResource(R.string.search_hint),
-                                style = TextStyle(fontSize = 12.sp),
-                                color = Color(0xFFBDBDBD)
-                            )
-                        }
-                        innerTextField()
-                    }
-                },
-                textStyle = TextStyle(fontSize = 13.sp, color = Color.White),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        val q = query.trim()
-                        if (q.isNotEmpty()) onSearch(q)
-                    },
-                    onDone = {
-                        val q = query.trim()
-                        if (q.isNotEmpty()) onSearch(q)
-                    }
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .focusRequester(searchFocus)
-                    .onKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                        when (event.key) {
-                            Key.DirectionLeft ->
-                                if (query.isEmpty()) {
-                                    navEntry.requestFocus()
-                                    true
-                                } else {
-                                    false
-                                }
-                            Key.DirectionDown -> {
-                                heroFocus.requestFocus()
-                                true
-                            }
-                            // Nothing above or to the right of the search pill —
-                            // consume so the default (nearest-element) traversal
-                            // can't jump focus somewhere unexpected. When the
-                            // field holds text, let the default handle it
-                            // (cursor movement).
-                            Key.DirectionUp -> query.isEmpty()
-                            Key.DirectionRight -> query.isEmpty()
-                            else -> false
-                        }
-                    }
-                    .onFocusChanged { fieldFocused = it.hasFocus }
-            )
-        }
-    }
-}
-
-/**
- * Side navigation (stardima_tv_flutter SideNav): the AraToons logo with a
- * "TV APP" badge on top, glass-card items (Home / Movies / Series /
- * Recently / Search) and Settings pinned to the bottom. Always visible;
- * D-pad RIGHT leaves for the content entry point.
- */
-@Composable
-fun SideNavOverlay(
-    active: String,
-    onNavigate: (String) -> Unit,
-    navEntry: FocusRequester,
-    contentEntry: FocusRequester,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .width(190.dp)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Logo + "TV APP" badge
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Ara",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.ExtraBold
-                ),
-                color = Color.White
-            )
-            Text(
-                text = "Toons",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.ExtraBold
-                ),
-                color = MaterialTheme.colorScheme.primary
-            )
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                        RoundedCornerShape(6.dp)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                        shape = RoundedCornerShape(6.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.tv_app),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp
-                    ),
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        SideNavEntry(
-            icon = Icons.Filled.Home,
-            label = stringResource(R.string.home),
-            key = "home",
-            active = active,
-            onNavigate = onNavigate,
-            navEntry = navEntry,
-            contentEntry = contentEntry
-        )
-        SideNavEntry(
-            icon = Icons.Filled.Movie,
-            label = stringResource(R.string.movies),
-            key = "movies",
-            active = active,
-            onNavigate = onNavigate,
-            navEntry = null,
-            contentEntry = contentEntry
-        )
-        SideNavEntry(
-            icon = Icons.Filled.AutoAwesome,
-            label = stringResource(R.string.series),
-            key = "series",
-            active = active,
-            onNavigate = onNavigate,
-            navEntry = null,
-            contentEntry = contentEntry
-        )
-        SideNavEntry(
-            icon = Icons.Filled.History,
-            label = stringResource(R.string.recently_watched),
-            key = "recently",
-            active = active,
-            onNavigate = onNavigate,
-            navEntry = null,
-            contentEntry = contentEntry
-        )
-        SideNavEntry(
-            icon = Icons.Filled.Search,
-            label = stringResource(R.string.search),
-            key = "search",
-            active = active,
-            onNavigate = onNavigate,
-            navEntry = null,
-            contentEntry = contentEntry
-        )
-        Spacer(Modifier.weight(1f))
-        SideNavEntry(
-            icon = Icons.Filled.Settings,
-            label = stringResource(R.string.settings),
-            key = "settings",
-            active = active,
-            onNavigate = onNavigate,
-            navEntry = null,
-            contentEntry = contentEntry
-        )
-    }
-}
-
-/**
- * One glass-card nav item: translucent fill + thin light border; the
- * active item gets a gold border, gold icon/label and a zoom on focus.
- * D-pad RIGHT goes to the content entry point.
- */
-@Composable
-private fun SideNavEntry(
-    icon: ImageVector,
-    label: String,
-    key: String,
-    active: String,
-    onNavigate: (String) -> Unit,
-    navEntry: FocusRequester?,
-    contentEntry: FocusRequester = FocusRequester()
-) {
-    var focused by remember { mutableStateOf(false) }
-    val gold = MaterialTheme.colorScheme.primary
-    val scale by animateFloatAsState(
-        targetValue = if (focused) 1.04f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f)
-    )
-    val shape = RoundedCornerShape(14.dp)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .scale(scale)
-            .clip(shape)
-            .background(
-                if (active == key) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.06f),
-                shape
-            )
-            .border(
-                width = 1.dp,
-                color = if (active == key) gold.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.10f),
-                shape = shape
-            )
-            // onFocusChanged must sit OUTSIDE the focusable node: it only
-            // aggregates focus targets that follow it in the chain, so
-            // placing it after clickable() never reported the item's focus
-            .onFocusChanged { focused = it.hasFocus }
-            .then(navEntry?.let { Modifier.focusRequester(it) } ?: Modifier)
-            .focusable()
-            .onKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                when (event.key) {
-                    // RIGHT leaves the menu for the content entry point
-                    Key.DirectionRight -> {
-                        contentEntry.requestFocus()
-                        true
-                    }
-                    // Nothing to the left of the nav column — consume so the
-                    // default traversal can't jump focus unexpectedly
-                    Key.DirectionLeft -> true
-                    // UP/DOWN: default traversal moves between menu items
-                    else -> false
-                }
-            }
-            .clickable(interactionSource = null, indication = null) { onNavigate(key) }
-            .padding(start = 16.dp, end = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (active == key || focused) gold else Color(0xFFE0E0E0),
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 13.sp,
-                fontWeight = if (active == key) FontWeight.Bold else FontWeight.Medium
-            ),
-            color = when {
-                active == key -> gold
-                focused -> Color.White
-                else -> Color(0xFFE0E0E0)
-            }
-        )
-    }
-}
-
 /**
  * Horizontal content rail (stardima_tv_flutter ContentRail): a bold rail
  * title on top and a row of 88dp-wide poster cards. No arrow buttons —
  * the D-pad drives horizontal/vertical rail focus, crossing rail
- * boundaries explicitly: UP at the top rail goes to the hero, LEFT at the
- * leftmost card of the top rail goes to the hero (other rails: side nav),
+ * boundaries explicitly: UP at the top rail goes to the immersive preview,
+ * LEFT at the leftmost card of any rail goes to the bottom tab bar,
  * UP/DOWN between rails move to the same card index of the neighbouring
- * rail (clamped), RIGHT at the rightmost card wraps around to the
- * leftmost (ring, standard TV carousel), and DOWN on the bottom rail is a
- * consumed no-op so focus never falls into the default nearest-element
- * traversal (see android.com/training/tv/get-started/navigation +
- * "Android TV D-pad Navigation Handling in Jetpack Compose").
+ * rail (clamped), DOWN on the bottom rail goes to the tab bar, RIGHT at
+ * the rightmost card wraps around to the leftmost (ring, standard TV
+ * carousel), and ENTER opens the item (see
+ * android.com/training/tv/get-started/navigation + "Android TV D-pad
+ * Navigation Handling in Jetpack Compose").
  */
 @Composable
 fun ContentRail(
@@ -566,8 +192,9 @@ fun ContentRail(
     railCount: Int = 1,
     prevCount: Int = 0,
     nextCount: Int = 0,
-    heroFocus: FocusRequester? = null,
+    previewFocus: FocusRequester?,
     navEntry: FocusRequester? = null,
+    onCardFocus: ((VideoItem, Boolean) -> Unit)? = null,
     cardNodes: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
     railStates: MutableMap<Int, LazyListState> = remember { mutableMapOf() },
     railColumnState: LazyListState? = null
@@ -640,11 +267,11 @@ fun ContentRail(
                                     focusCard(nodeKey - 1)
                                     true
                                 }
-                                railIndex == 0 -> {
-                                    heroFocus?.requestFocus()
-                                    true
-                                }
                                 else -> {
+                                    // Leftmost card: nothing to the left.
+                                    // Escaping to the bottom tab bar keeps
+                                    // focus inside the shell (never into
+                                    // the default nearest-element traversal)
                                     navEntry?.requestFocus()
                                     true
                                 }
@@ -661,7 +288,9 @@ fun ContentRail(
                             }
                             Key.DirectionUp -> when {
                                 railIndex == 0 -> {
-                                    heroFocus?.requestFocus()
+                                    // Top rail: above is the immersive
+                                    // preview block
+                                    previewFocus?.requestFocus()
                                     true
                                 }
                                 else -> {
@@ -673,10 +302,8 @@ fun ContentRail(
                                 focusCard((railIndex + 1) * 1000 + index.coerceIn(0, nextCount - 1))
                                 true
                             } else {
-                                // Bottom rail: nothing below. Consume the key so
-                                // the default traversal can't wrap focus to the
-                                // top of the screen (predictable dead end, no
-                                // infinite loop)
+                                // Bottom rail: below is the bottom tab bar
+                                navEntry?.requestFocus()
                                 true
                             }
                             else -> false
@@ -685,6 +312,7 @@ fun ContentRail(
                     onFocus = { hasFocus ->
                         if (hasFocus) {
                             android.util.Log.d("FocusMap", "CARD focus rail=$railIndex idx=$index")
+                            onCardFocus?.invoke(item, hasFocus)
                             // Keep the focused card visible in its rail…
                             val first = state.firstVisibleItemIndex
                             val visible = state.layoutInfo.visibleItemsInfo.size
@@ -941,54 +569,6 @@ fun PosterCard(
         )
     }
 }
-
-/**
- * Menu card for the home screen sidebar.
- */
-@Composable
-fun MenuCard(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val focusRequester = remember { FocusRequester() }
-    val unit = remember { Unit }
-    Card(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .focusRequester(focusRequester)
-            .pointerInput(unit) {
-                detectTapGestures(onTap = { onClick() })
-            }
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
-/**
- * "Page X / Y" picker: a read-only field that opens a scrollable menu of
- * page numbers. Shown when the catalog has more than one page.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PageDropdown(
@@ -1038,48 +618,6 @@ fun PageDropdown(
     }
 }
 
-/**
- * Hero carousel dots (stardima_tv_flutter): small white dots, the active
- * one stretched into a gold pill. Each dot is tappable ([onSelect]) so
- * touch users can jump to any poster — the D-pad already cycles on the
- * hero itself.
- */
-@Composable
-fun HeroDots(
-    count: Int,
-    index: Int,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        repeat(count.coerceAtMost(12)) { i ->
-            val current = i == index
-            Box(
-                modifier = Modifier
-                    .width(if (current) 18.dp else 6.dp)
-                    .height(24.dp) // tall tap target for touch
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(interactionSource = null, indication = null) { onSelect(i) },
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .animateContentSize()
-                        .width(if (current) 18.dp else 6.dp)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(
-                            if (current) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.35f),
-                            RoundedCornerShape(3.dp)
-                        )
-                )
-            }
-        }
-    }
-}
 
 /**
  * Page number rail for catalogs (stardima_tv_flutter catalog screen): a

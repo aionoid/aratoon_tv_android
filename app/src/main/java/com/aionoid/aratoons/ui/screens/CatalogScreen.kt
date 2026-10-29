@@ -85,7 +85,8 @@ import kotlinx.coroutines.launch
 fun CatalogScreen(
     path: String,
     title: String,
-    navController: NavHostController
+    navController: NavHostController,
+    focusEntry: FocusRequester? = null
 ) {
     val app = App.instance
     val scope = rememberCoroutineScope()
@@ -100,7 +101,7 @@ fun CatalogScreen(
     var gridMode by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val gridState = remember { androidx.compose.foundation.lazy.grid.LazyGridState() }
-    val firstRowFocus = remember { FocusRequester() }
+    val firstRowFocus = focusEntry ?: remember { FocusRequester() }
     val watchFocus = remember { FocusRequester() }
 
     LaunchedEffect(path, page, loadKey) {
@@ -131,22 +132,8 @@ fun CatalogScreen(
     val list = items ?: emptyList()
     val preview = list.getOrNull(selected)
 
-    // Leanback: start focus on the first row of the loaded page.
-    // Wait a frame so the previous page's rows (and their pinnable focus
-    // items) are released before the focus transaction enters the new
-    // first row — avoids the "Release should only be called once" crash
-    // when a page change swaps the list while focus is inside it.
-    LaunchedEffect(items) {
-        val list = items
-        if (list != null && list.isNotEmpty()) {
-            withFrameNanos { }
-            try {
-                firstRowFocus.requestFocus()
-            } catch (e: IllegalStateException) {
-                // Pinnable item already released; next D-pad press re-anchors.
-            }
-        }
-    }
+    // Focus is managed by the shell via focusEntry; this screen does not
+    // auto-request focus on its own.
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Layer 0: full-screen blurred backdrop of the selected poster

@@ -5,7 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.0] - 2026-10-28
+## Unreleased
+
+### Added
+
+- **New UI shell**: the left side-nav overlay is replaced by a horizontal
+  tab bar (Home / Movies / Series / Recently Watched / Search / Settings)
+  with the gold selected pill. A new top-level `AraTooonsShell` owns focus
+  and hosts the tab bar + the selected tab's content; item-level
+  navigation (server select, player) still pushes on top of the shell
+- **Immersive-list home**: the home screen is now the Android TV
+  immersive-list — a full-width cinematic hero preview at the top with content
+  rails stacked below (Popular, Movies, Series, Recently Watched). The hero
+  background is scaled up and shifted so the subject lands in the top-right
+  corner (the Android TV "Composition" guideline), with the content block
+  (title + description) over a legible scrim. The hero Play/Add buttons and
+  carousel dots are gone — the hero is a single tappable/focusable preview
+  area. Tapping or focusing a rail card sets the hero
+- **Rail focus wiring**: `ContentRail` routes LEFT/RIGHT to cycle cards,
+  UP from the top rail to the preview, DOWN from the bottom rail to the
+  tab bar, and crosses rails at the same card index (clamped)
+- Catalog / Recently Watched / Search now accept `focusEntry` and stop
+  auto-requesting focus on their own, so the shell owns focus
+
+### Changed
+
+- `AraTooonsShell` renders the HOME route in `NavGraph` (item-level nav
+  pushes above it)
+- Removed the old chrome composables: `SideNavEntry`, `SideNavItem`,
+  `TopBarOverlay`, `MenuCard`, `HeroDots`
+- The old home "side-nav + hero + 3 rails" layout is gone; the preview is
+  now full-width at the top (immersive-list) instead of a top-left block
+- **Centered icon tabs**: the top tab bar is now centered; each tab is an
+  icon-only button that expands to icon + text only when selected (gold pill)
 
 ### Added
 

@@ -52,10 +52,10 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun SearchScreen(navController: NavHostController, initialQuery: String = "") {
+fun SearchScreen(navController: NavHostController, initialQuery: String = "", focusEntry: FocusRequester? = null) {
     val app = App.instance
     val scope = rememberCoroutineScope()
-    val focusRequester = remember { FocusRequester() }
+    val focusRequester = focusEntry ?: remember { FocusRequester() }
 
     var query by rememberSaveable { mutableStateOf(initialQuery) }
     var searchedQuery by remember { mutableStateOf("") }
@@ -100,10 +100,10 @@ fun SearchScreen(navController: NavHostController, initialQuery: String = "") {
 
     val list = items ?: emptyList()
 
-    // Leanback: start focus on the search field; auto-run a query that
-    // arrived via the top-bar search field (search?query=…)
+    // Run a query that arrived as an initial query, if any. Focus is
+    // managed by the shell via focusEntry; this screen does not auto-request
+    // focus on its own.
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
         if (initialQuery.trim().isNotEmpty()) doSearch()
     }
 
