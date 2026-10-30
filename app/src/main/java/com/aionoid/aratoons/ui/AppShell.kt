@@ -298,9 +298,10 @@ private fun TabItem(
             // (icon-only <-> icon + text).
             .animateContentSize()
             .height(44.dp)
-            // Generous internal padding so the icon and the label never stick
-            // to the pill edge.
-            .padding(horizontal = 14.dp, vertical = 5.dp)
+            // Internal padding so the icon and the label sit clear of the pill
+            // edge (and its border) — never hugging the edge.
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .widthIn(min = 128.dp)
             .scale(scale)
             .clip(shape)
             .background(if (selected) gold else Color.Transparent, shape)
