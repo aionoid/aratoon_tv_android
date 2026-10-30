@@ -54,7 +54,11 @@ a generic "error" page with no embed; the slug-prefixed
    - TDD: 5 new unit tests in `VideoItemRoutingTest.kt` (34/34 pass).
    - Status: DONE — committed + release built.
 
-5. [ ] The search input on the search page needs to be rounded.
+5. [x] The search input on the search page needs to be rounded.
+   - The search field used Material 3's near-square default shape. Matched the
+     Flutter reference's `BorderRadius.circular(14)` with a 14dp corner radius
+     plus a subtle white 0.06 fill for the glass border.
+   - Status: DONE — committed + release built.
 
 6. [x] the TV app lean back don't show app icon like on normal android.
    - Root cause: Android TV requires a 16:9 `android:banner` in addition to the
