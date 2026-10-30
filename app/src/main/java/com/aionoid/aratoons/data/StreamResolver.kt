@@ -206,12 +206,26 @@ class StreamResolver(private val context: Context, private val http: OkHttpClien
                 } catch (_: IOException) {
                     continue
                 }
-                val watchUrl = apiData.optString("watch_url", "")
+                var watchUrl = apiData.optString("watch_url", "")
                 if (watchUrl.isEmpty()) continue
+
+                // --- iimag.top proxy: the site now wraps Uqload/Lulustream/
+                //     Mixdrop/etc. in a JS form-submit stub (embed2/?id=...).
+                //     The real server page is in the id= param and is directly
+                //     fetchable — fetch it and continue (avoids the unreliable
+                //     WebView fallback that causes "some work, some don't").
+                val proxyUrl = watchUrl
+                if ("iimag.top" in watchUrl) {
+                    val idParam = queryParam(watchUrl, "id")
+                    if (idParam != null) {
+                        val realUrl = URLDecoder.decode(idParam, "UTF-8")
+                        watchUrl = realUrl
+                    }
+                }
                 triedWatchUrls.add(watchUrl)
 
                 val playerHtml = try {
-                    fetchText(watchUrl, mapOf("Referer" to embedUrl))
+                    fetchText(watchUrl, mapOf("Referer" to proxyUrl))
                 } catch (_: IOException) {
                     continue
                 }
@@ -224,6 +238,27 @@ class StreamResolver(private val context: Context, private val http: OkHttpClien
                         return@withContext StreamResult(mp4, headers(mapOf("Referer" to origin(watchUrl))))
                     }
                     Log.d(logTag, "Mixdrop: direct decode failed, falling through")
+                }
+
+                // --- Uqload: base-36 eval decode (m3u8 from decoded JWPlayer) ---
+                if (server.name == "Uqload") {
+                    val m3u8 = EvalDecoder.extractJwPlayerUrl(playerHtml)
+                    if (m3u8 != null) {
+                        val cleaned = EvalDecoder.cleanJwPlayerUrl(m3u8)
+                        warmUp(cleaned)
+                        return@withContext StreamResult(cleaned, playerHeaders())
+                    }
+                }
+
+                // --- Lulustream: katana eval decode ---
+                if (server.name == "Lulustream") {
+                    val m3u8 = EvalDecoder.extractLulustreamUrl(playerHtml)
+                        ?: EvalDecoder.extractJwPlayerUrl(playerHtml)
+                    if (m3u8 != null) {
+                        val cleaned = EvalDecoder.cleanJwPlayerUrl(m3u8)
+                        warmUp(cleaned)
+                        return@withContext StreamResult(cleaned, playerHeaders())
+                    }
                 }
 
                 // --- StreamHG direct (hgplaycdn.com) ---
