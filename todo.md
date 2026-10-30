@@ -32,8 +32,12 @@ a generic "error" page with no embed; the slug-prefixed
      comfortably inside the gold border instead of hugging the edge.
    - Status: DONE — committed (v0.10.3).
 
-3. [ ] On the search page: replace the pagination dropdown with the same
+3. [x] On the search page: replace the language filter dropdown with the same
        pagination used on the catalog pages (for "movies and series").
+    - Replaced the `PageDropdown` pagination in SearchScreen with the
+      `CatalogPageBar` (glass pill bar with page numbers + prev/next arrows),
+      the same pattern used by CatalogScreen.
+    - Status: DONE — committed.
 
 4. [ ] Bug: the search results show some episodes, and clicking an episode takes
        you to a different series, not that episode.
