@@ -15,10 +15,23 @@ android {
         versionName = "0.10.3"
     }
 
+    signingConfigs {
+        val debugKeystore = "/root/.dockercache/android-sdk-keystore/debug.keystore"
+        create("shared") {
+            storeFile = File(debugKeystore)
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig = signingConfigs["shared"]
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs["shared"]
         }
     }
 

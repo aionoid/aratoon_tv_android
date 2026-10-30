@@ -27,12 +27,12 @@ a generic "error" page with no embed; the slug-prefixed
 
 2. [x] Top bar nav buttons: add padding between the inside content ("icon +
        text") and the edge of the button border.
-    - Increased internal padding from 14dp/5dp to 16dp/6dp and added a 128dp
-      minimum width on the selected "Home" pill so the icon and label sit
-      comfortably inside the gold border instead of hugging the edge.
-    - Status: DONE — committed (v0.10.3).
+   - Increased internal padding from 14dp/5dp to 16dp/6dp and added a 128dp
+     minimum width on the selected "Home" pill so the icon and label sit
+     comfortably inside the gold border instead of hugging the edge.
+   - Status: DONE — committed (v0.10.3).
 
-3. [ ] On the search page: replace the language filter dropdown with the same
+3. [ ] On the search page: replace the pagination dropdown with the same
        pagination used on the catalog pages (for "movies and series").
 
 4. [ ] Bug: the search results show some episodes, and clicking an episode takes
@@ -41,28 +41,28 @@ a generic "error" page with no embed; the slug-prefixed
 5. [ ] The search input on the search page needs to be rounded.
 
 6. [x] the TV app lean back don't show app icon like on normal android.
-    - Root cause: Android TV requires a 16:9 `android:banner` in addition to
-      the launcher icon. The manifest was missing it, so the TV launcher showed
-      a gray rectangle instead of the app icon.
-    - Fix: added `ic_banner.png` (16:9, logo centered) at all densities
-      (mdpi-xxxhdpi) and set `android:banner="@mipmap/ic_banner"` in
-      AndroidManifest.xml.
-    - Status: DONE — committed.
+   - Root cause: Android TV requires a 16:9 `android:banner` in addition to the
+     launcher icon. The manifest was missing it, so the TV launcher showed a
+     gray rectangle instead of the app icon.
+   - Fix: added `ic_banner.png` (16:9, logo centered) at all densities
+     (mdpi-xxxhdpi) and set `android:banner="@mipmap/ic_banner"` in
+     AndroidManifest.xml.
+   - Status: DONE — committed.
 
 7. [x] Add unit tests (TDD pattern) so we don't get in this kind of errors later
-    and can reduce manual testing / save time.
-    - Added JUnit 4 + kotlinx-coroutines-test + Truth test dependencies.
-    - `EvalDecoderTest` (16 tests): toBase36, decodeBase36, decodeMixdrop,
-      extractMixdropUrl, extractJwPlayerUrl, extractStreamHgUrl,
-      extractLulustreamUrl, extractGoodstreamUrl, cleanJwPlayerUrl (both
-      formats), extractJwPlayerCookies.
-    - `StreamResolverTest` (13 tests): queryParam (basic, null cases, multiple
-      params, strema.top), origin (https, http, port, no-path, invalid),
-      iimag.top proxy (mixdrop, uqload, lulustream).
-    - **Bug found by TDD:** `cleanJwPlayerUrl` Format 1 used
-      `groupValues[3]` (t2) instead of `groupValues[4]` (t3) — the wrong
-      quality value was substituted. Fixed to `groupValues[4]`.
-    - Status: DONE — committed.
+       and can reduce manual testing / save time.
+   - Added JUnit 4 + kotlinx-coroutines-test + Truth test dependencies.
+   - `EvalDecoderTest` (16 tests): toBase36, decodeBase36, decodeMixdrop,
+     extractMixdropUrl, extractJwPlayerUrl, extractStreamHgUrl,
+     extractLulustreamUrl, extractGoodstreamUrl, cleanJwPlayerUrl (both
+     formats), extractJwPlayerCookies.
+   - `StreamResolverTest` (13 tests): queryParam (basic, null cases, multiple
+     params, strema.top), origin (https, http, port, no-path, invalid),
+     iimag.top proxy (mixdrop, uqload, lulustream).
+   - **Bug found by TDD:** `cleanJwPlayerUrl` Format 1 used `groupValues[3]`
+     (t2) instead of `groupValues[4]` (t3) — the wrong quality value was
+     substituted. Fixed to `groupValues[4]`.
+   - Status: DONE — committed.
 
-8. [ ] the background image on the catalogs "Movies/Series" is pixilated blure
+8. [ ] the background image on the catalogs "Movies/Series" is pixilated, blure
        it and make it smooth.
