@@ -19,7 +19,8 @@ data class VideoItem(
 
 data class Episode(
     val id: Int,
-    val title: String
+    val title: String,
+    val episodeNumber: Int = 0
 )
 
 /** Result of scraping a series detail page. */

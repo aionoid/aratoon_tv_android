@@ -46,7 +46,11 @@ object StardimaApi {
      */
     fun upscalePoster(url: String, width: Int = 780): String {
         val m = Regex("/t/p/w\\d+/").find(url) ?: return url
-        return url.replaceFirst(m.value, "/t/p/w$width/")
+        // TMDB only serves a fixed set of widths; clamp to the nearest valid
+        // one so a mis-specified width (e.g. w520) never 400s.
+        val valid = intArrayOf(300, 400, 500, 780, 1280)
+        val clamped = valid.minByOrNull { Math.abs(it - width) } ?: width
+        return url.replaceFirst(m.value, "/t/p/w$clamped/")
     }
 
     private fun parseVideo(v: JSONObject): VideoItem {
@@ -163,7 +167,13 @@ object StardimaApi {
             val out = ArrayList<Episode>(arr.length())
             for (i in 0 until arr.length()) {
                 val ep = arr.optJSONObject(i) ?: continue
-                out.add(Episode(ep.optInt("id", 0), ep.optString("title", "")))
+                out.add(
+                    Episode(
+                        ep.optInt("id", 0),
+                        ep.optString("title", ""),
+                        ep.optInt("episode_number", 0)
+                    )
+                )
             }
             out
         }
