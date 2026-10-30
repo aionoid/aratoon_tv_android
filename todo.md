@@ -65,4 +65,5 @@ a generic "error" page with no embed; the slug-prefixed
    - Status: DONE — committed.
 
 8. [ ] the background image on the catalogs "Movies/Series" is pixilated, blure
-       it and make it smooth.
+       it and make it smooth. and apply Gradient Scrim so the top is dark and
+       the bottom is dark and the middle is visible

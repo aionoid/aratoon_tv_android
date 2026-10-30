@@ -40,7 +40,7 @@ import com.aionoid.aratoons.data.StardimaApi
 import com.aionoid.aratoons.data.VideoItem
 import com.aionoid.aratoons.ui.ErrorBox
 import com.aionoid.aratoons.ui.LoadingBox
-import com.aionoid.aratoons.ui.PageDropdown
+import com.aionoid.aratoons.ui.CatalogPageBar
 import com.aionoid.aratoons.ui.PosterCard
 import com.aionoid.aratoons.ui.Routes
 import com.aionoid.aratoons.ui.systemBarsContentPadding
@@ -163,26 +163,16 @@ fun SearchScreen(navController: NavHostController, initialQuery: String = "", fo
 
         if (searchedQuery.isNotEmpty() && lastPage > 1) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Row(
+                CatalogPageBar(
+                    page = page,
+                    lastPage = lastPage,
+                    onPrev = { goPage(page - 1) },
+                    onNext = { goPage(page + 1) },
+                    onPage = { goPage(it) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(onClick = { goPage(page - 1) }, enabled = page > 1) {
-                        Text(stringResource(R.string.page_previous))
-                    }
-                    PageDropdown(
-                        current = page,
-                        lastPage = lastPage,
-                        onPick = { goPage(it) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    Button(onClick = { goPage(page + 1) }, enabled = page < lastPage) {
-                        Text(stringResource(R.string.page_next))
-                    }
-                }
+                        .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)
+                )
             }
         }
 
