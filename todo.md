@@ -39,8 +39,20 @@ a generic "error" page with no embed; the slug-prefixed
       the same pattern used by CatalogScreen.
     - Status: DONE — committed.
 
-4. [ ] Bug: the search results show some episodes, and clicking an episode takes
-       you to a different series, not that episode.
+4. [x] Bug: the search results show some episodes, and clicking an episode takes
+    you to a different series, not that episode.
+   - Root cause: StarDima API returns `is_series: true` for BOTH series detail
+     pages and episode pages. The click handler used `item.isSeries` to decide,
+     then extracted the slug with `substringAfterLast("/")` — for an episode
+     URL `/tvshow/{slug}/play/{id}` this gave the numeric episode ID, so
+     SeriesScreen loaded the wrong `/tvshow/{id}`.
+   - Fix: new `VideoItemRouting.isSeriesPage(item)` — true only when
+     `isSeries` AND the URL does NOT contain `/play/`. Applied to the click
+     handlers in SearchScreen and CatalogScreen (3 spots). Episode pages now
+     route to `Routes.servers(...)` (server selection), matching the Kodi
+     addon's behavior (`actionResolve`).
+   - TDD: 5 new unit tests in `VideoItemRoutingTest.kt` (34/34 pass).
+   - Status: DONE — committed + release built.
 
 5. [ ] The search input on the search page needs to be rounded.
 

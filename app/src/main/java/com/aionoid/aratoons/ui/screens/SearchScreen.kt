@@ -38,6 +38,7 @@ import com.aionoid.aratoons.App
 import com.aionoid.aratoons.R
 import com.aionoid.aratoons.data.StardimaApi
 import com.aionoid.aratoons.data.VideoItem
+import com.aionoid.aratoons.data.VideoItemRouting
 import com.aionoid.aratoons.ui.ErrorBox
 import com.aionoid.aratoons.ui.LoadingBox
 import com.aionoid.aratoons.ui.CatalogPageBar
@@ -210,7 +211,7 @@ fun SearchScreen(navController: NavHostController, initialQuery: String = "", fo
             PosterCard(
                 item = item,
                 onClick = {
-                    if (item.isSeries) {
+                    if (VideoItemRouting.isSeriesPage(item)) {
                         navController.navigate(
                             Routes.series(item.url.substringAfterLast("/"))
                         )

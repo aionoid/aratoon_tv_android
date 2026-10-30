@@ -56,6 +56,7 @@ import com.aionoid.aratoons.App
 import com.aionoid.aratoons.R
 import com.aionoid.aratoons.data.StardimaApi
 import com.aionoid.aratoons.data.VideoItem
+import com.aionoid.aratoons.data.VideoItemRouting
 import com.aionoid.aratoons.ui.ActionPill
 import com.aionoid.aratoons.ui.BlurredImage
 import com.aionoid.aratoons.ui.CatalogPageBar
@@ -228,7 +229,7 @@ fun CatalogScreen(
                                 item = item,
                                 widthDp = 148.dp,
                                 onClick = {
-                                    if (item.isSeries) {
+                                    if (VideoItemRouting.isSeriesPage(item)) {
                                         navController.navigate(
                                             Routes.series(item.url.substringAfterLast("/"))
                                         )
@@ -262,7 +263,7 @@ fun CatalogScreen(
                             modifier = Modifier.fillMaxSize(),
                             watchFocusRequester = watchFocus,
                             onWatch = {
-                                if (preview.isSeries) {
+                                if (VideoItemRouting.isSeriesPage(preview)) {
                                     navController.navigate(
                                         Routes.series(preview.url.substringAfterLast("/"))
                                     )
@@ -368,7 +369,7 @@ fun CatalogScreen(
                                 item = item,
                                 selected = index == selected,
                                 onClick = {
-                                    if (item.isSeries) {
+                                    if (VideoItemRouting.isSeriesPage(item)) {
                                         navController.navigate(
                                             Routes.series(item.url.substringAfterLast("/"))
                                         )
