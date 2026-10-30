@@ -19,8 +19,8 @@ class StreamResolverTest {
         val url = "https://iimag.top/embed2/?id=https%3A%2F%2Fmixdrop.top%2Fe%2Fabc123"
         val result = resolver.queryParam(url, "id")
         assertNotNull(result)
-        assertTrue(result.contains("mixdrop.top"))
-        assertTrue(result.contains("abc123"))
+        assertTrue(result!!.contains("mixdrop.top"))
+        assertTrue(result!!.contains("abc123"))
     }
 
     @Test
@@ -49,8 +49,8 @@ class StreamResolverTest {
         val url = "https://strema.top/embed?id=https%3A%2F%2Fhgplaycdn.com%2Fv1%2Fmaster.m3u8&token=abc"
         val result = resolver.queryParam(url, "id")
         assertNotNull(result)
-        assertTrue(result.contains("hgplaycdn.com"))
-        assertTrue(result.contains("master.m3u8"))
+        assertTrue(result!!.contains("hgplaycdn.com"))
+        assertTrue(result!!.contains("master.m3u8"))
     }
 
     // ------------------------------------------------------------------
