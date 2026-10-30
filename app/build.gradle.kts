@@ -11,8 +11,8 @@ android {
         applicationId = "com.aionoid.aratoons"
         minSdk = 21
         targetSdk = 34
-        versionCode = 10
-        versionName = "0.10.0"
+        versionCode = 11
+        versionName = "0.10.1"
     }
 
     buildTypes {
