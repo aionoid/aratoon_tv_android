@@ -84,6 +84,14 @@ a generic "error" page with no embed; the slug-prefixed
      substituted. Fixed to `groupValues[4]`.
    - Status: DONE — committed.
 
-8. [ ] the background image on the catalogs "Movies/Series" is pixilated, blure
+8. [x] the background image on the catalogs "Movies/Series" is pixilated, blure
        it and make it smooth. and apply Gradient Scrim so the top is dark and
        the bottom is dark and the middle is visible
+   - The full-screen catalog backdrop used a 24px blur that still left the
+     low-res TMDB poster texture showing, plus a flat 0.35 black overlay (no
+     gradient). Bumped the blur radius to 40px for a smooth, uniform backdrop
+     and replaced the flat overlay with a vertical gradient scrim (dark ~0.85 at
+     top, light ~0.12 in the middle, dark ~0.85 at the bottom) so the nav bar
+     and bottom edges darken for legibility while the centre stays visible for
+     the spotlight/list content.
+   - Status: DONE — committed + release built.

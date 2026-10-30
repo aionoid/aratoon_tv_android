@@ -137,19 +137,29 @@ fun CatalogScreen(
     // auto-request focus on its own.
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Layer 0: full-screen blurred backdrop of the selected poster
+        // Layer 0: full-screen blurred backdrop of the selected poster, plus a
+        // vertical gradient scrim (dark top + bottom, lighter middle) so the
+        // featured text stays legible and the low-res poster is hidden smoothly.
         if (preview?.posterUrl?.isNotEmpty() == true) {
             BlurredImage(
                 model = preview.posterUrl,
                 modifier = Modifier.fillMaxSize(),
-                blurRadius = 24f,
+                blurRadius = 40f,
                 fullFrame = true,
                 alpha = 0.55f
             )
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.35f))
+                    .background(
+                        Brush.verticalGradient(
+                            0.0f to Color.Black.copy(alpha = 0.85f),
+                            0.4f to Color.Black.copy(alpha = 0.28f),
+                            0.5f to Color.Black.copy(alpha = 0.12f),
+                            0.6f to Color.Black.copy(alpha = 0.28f),
+                            1.0f to Color.Black.copy(alpha = 0.85f)
+                        )
+                    )
             )
         } else {
             Box(
