@@ -5,7 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.3] - 2026-10-30
+## [0.10.4] - 2026-10-30
+
+### Fixed
+
+- **Search episode opened the wrong series (task 4):** the Stardima API
+  returns `is_series: true` for both a series detail page
+  (`/tvshow/{slug}`) and an episode page
+  (`/tvshow/{slug}/play/{id}`). Clicking a search/catalog episode used
+  `substringAfterLast("/")` as the series slug, which on an episode URL is
+  just the numeric episode **id** — so the Series screen loaded an unrelated
+  `/tvshow/{id}`.
+- New `data.VideoItemRouting.isSeriesPage(item)` now gates the Series
+  navigation: an item only opens the Series screen when it is series-flagged
+  **and** the URL has no `/play/`. Episode pages route to the server
+  selection screen instead, matching the Kodi addon's `actionResolve` path.
+- Applied in `SearchScreen` and `CatalogScreen` (grid + spotlight).
+- TDD: 5 new unit tests in `VideoItemRoutingTest.kt` (34/34 green).
+  Verified on Waydroid: searching an episode title lands on the server
+  list (Mixdrop / Uqload / Lulustream / Savefiles), not a wrong series.
 
 ### Changed
 - **Top bar tab pills (task 2):** More breathing room inside the tab buttons.
