@@ -7,11 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.10.0] - 2026-10-30
+
 ### Changed
 
 - Home preview is now full-bleed (edge-to-edge) and flush with the top of
   the content area — it starts immediately under the tab bar with no gap
   (immersive-list anatomy). The 20dp inset now applies to the rails only
+
+### Added
+
+- **Two-step episode list for series**: the series screen is now a two-panel
+  layout — a persistent left column with the series header (poster, title,
+  description) and a right panel that transitions (animated fade/slide) between
+  the season list (step 1) and that season's episode list (step 2). Selecting
+  a season animates to its episodes; selecting an episode opens the server list.
+  BACK from the episode list returns to the season list; BACK from there goes
+  home.
+- Episode rows show a number badge (from the API `episode_number`) instead of
+  a per-episode thumbnail — the site returns the same series-level image for
+  every episode.
+
+### Fixed
+
+- **Series crash on back**: the series screen held non-`Saveable` state
+  (`SeasonInfo`) in `rememberSaveable`, throwing `IllegalStateException` when
+  leaving the screen. All series state is now plain `remember`; the data is
+  re-fetched on composition.
+- **Smart back navigation**: `onKeyEvent` on a Box can't catch system BACK.
+  Replaced with `BackHandler(enabled = selectedSeason != null)` so BACK from the
+  episode list returns to the season list, and BACK from the season list pops
+  to home (via the nav host).
+- **Playback regression (no servers)**: the site changed the episode URL format.
+  The bare `/play/{id}` path now returns a generic "error" page with no embed;
+  the slug-prefixed `/tvshow/{slug}/play/{id}` path is required. Series now
+  navigate with the slug-prefixed URL, so the server list resolves again.
 
 ## [0.9.0] - 2026-10-29
 

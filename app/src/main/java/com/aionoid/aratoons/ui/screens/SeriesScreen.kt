@@ -219,9 +219,13 @@ fun SeriesScreen(slug: String, navController: NavHostController) {
 
     fun playEpisode(ep: Episode) {
         val seasonPos = infoData.seasons.indexOf(selectedSeason ?: 0) + 1
+        // The site now requires the slug-prefixed play URL; the bare /play/{id}
+        // path returns a generic "error" page with no embed. Fall back to the
+        // short form only if a slug isn't available.
+        val playUrl = if (slug.isNotBlank()) "/tvshow/$slug/play/${ep.id}" else "/play/${ep.id}"
         navController.navigate(
             Routes.servers(
-                "/play/${ep.id}",
+                playUrl,
                 ep.title.ifEmpty { "${infoData.title} — S${seasonPos}E${ep.episodeNumber}" },
                 infoData.poster
             )
