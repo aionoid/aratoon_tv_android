@@ -21,7 +21,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Servers whose direct decode fails still fall back to the headless WebView.
 - Verified on the real TV: Mixdrop resolves + plays (MP4) end-to-end.
 
-## Unreleased
+## [0.10.2] - 2026-10-30
+
+### Added
+
+- **TV banner icon** (Android TV requirement): the app launcher now shows
+  the proper AraToons icon instead of a gray rectangle. Added 16:9
+  `ic_banner.png` at all densities and set `android:banner` in the
+  manifest.
+
+- **TDD unit test suite** (29 tests): JUnit tests for `StreamResolver`
+  and `EvalDecoder` — catches decoding and proxy-extraction regressions
+  early without manual testing. Tests cover:
+  - `EvalDecoder`: base-36 decode, Mixdrop identity decode, per-server
+    extractors (Mixdrop, Uqload, Lulustream, StreamHG, Goodstream),
+    `cleanJwPlayerUrl` (both formats), cookie extraction.
+  - `StreamResolver`: queryParam, origin, iimag.top proxy extraction
+    (Mixdrop, Uqload, Lulustream).
+
+### Fixed
+
+- **Bug found by TDD** — `EvalDecoder.cleanJwPlayerUrl` Format 1 used
+  `groupValues[3]` (the second quality value, `t2`) instead of
+  `groupValues[4]` (the last, `t3`). The wrong quality was substituted
+  into the m3u8 URL for Uqload/Goodstream. Fixed to `groupValues[4]`.
+
 
 ## [0.10.0] - 2026-10-30
 
