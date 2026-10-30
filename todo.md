@@ -25,8 +25,12 @@ a generic "error" page with no embed; the slug-prefixed
 
 ## TODO (user list — one commit + release per item)
 
-2. [ ] Top bar nav buttons: add padding between the inside content ("icon +
+2. [x] Top bar nav buttons: add padding between the inside content ("icon +
        text") and the edge of the button border.
+    - Increased internal padding from 14dp/5dp to 16dp/6dp and added a 128dp
+      minimum width on the selected "Home" pill so the icon and label sit
+      comfortably inside the gold border instead of hugging the edge.
+    - Status: DONE — committed (v0.10.3).
 
 3. [ ] On the search page: replace the language filter dropdown with the same
        pagination used on the catalog pages (for "movies and series").

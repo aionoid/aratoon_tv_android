@@ -5,21 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.1] - 2026-10-30
+## [0.10.3] - 2026-10-30
 
-### Fixed
-
-- **Playback — 2nd site-side change (iimag.top proxy)**: the site now wraps
-  Uqload / Mixdrop / Lulustream in an `iimag.top/embed2/?id=...` JS form-submit
-  stub. Previously only `strema.top` was handled. `StreamResolver` now extracts
-  the real server URL from the `id=` param, fetches it directly, and applies
-  the per-server decoders:
-  - **Mixdrop** — direct MP4 via identity `eval` decode.
-  - **Uqload** — base-36 `eval` decode (new handler).
-  - **Lulustream** — katana `eval` decode (new handler).
-  - StreamHG / Earnvids / Filemoon / Goodstream — existing handlers (unchanged).
-  Servers whose direct decode fails still fall back to the headless WebView.
-- Verified on the real TV: Mixdrop resolves + plays (MP4) end-to-end.
+### Changed
+- **Top bar tab pills (task 2):** More breathing room inside the tab buttons.
+  Internal padding increased to 16dp horizontal / 6dp vertical and a 128dp
+  minimum width on the selected "Home" pill so the icon and label are set
+  back from the gold edge instead of hugging it.
 
 ## [0.10.2] - 2026-10-30
 
@@ -45,6 +37,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `groupValues[3]` (the second quality value, `t2`) instead of
   `groupValues[4]` (the last, `t3`). The wrong quality was substituted
   into the m3u8 URL for Uqload/Goodstream. Fixed to `groupValues[4]`.
+
+
+## [0.10.1] - 2026-10-30
+
+### Fixed
+
+- **Playback — 2nd site-side change (iimag.top proxy)**: the site now wraps
+  Uqload / Mixdrop / Lulustream in an `iimag.top/embed2/?id=...` JS form-submit
+  stub. Previously only `strema.top` was handled. `StreamResolver` now extracts
+  the real server URL from the `id=` param, fetches it directly, and applies
+  the per-server decoders:
+  - **Mixdrop** — direct MP4 via identity `eval` decode.
+  - **Uqload** — base-36 `eval` decode (new handler).
+  - **Lulustream** — katana `eval` decode (new handler).
+  - StreamHG / Earnvids / Filemoon / Goodstream — existing handlers (unchanged).
+  Servers whose direct decode fails still fall back to the headless WebView.
+- Verified on the real TV: Mixdrop resolves + plays (MP4) end-to-end.
 
 
 ## [0.10.0] - 2026-10-30
