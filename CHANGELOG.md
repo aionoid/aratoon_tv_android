@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.6] - 2026-10-30
+
+### Changed
+
+- **Smooth catalog background + gradient scrim (task 8):** the full-screen
+  backdrop behind the Movies/Series catalogs used a 24px blur that still left
+  the low-res TMDB poster texture showing, plus a flat 0.35 black overlay with
+  no gradient. Bumped the blur radius to 40px so the backdrop is smooth and
+  uniform, and replaced the flat overlay with a vertical gradient scrim (dark
+  ~0.85 at the top, light ~0.12 in the middle, dark ~0.85 at the bottom) so
+  the nav bar and bottom edges darken for legibility while the centre stays
+  visible for the spotlight/list content.
+  Verified on Waydroid: Movies + Series catalogs now show a smooth blurred
+  backdrop with the dark-top / light-middle / dark-bottom scrim and legible
+  featured text.
+
 ## [0.10.5] - 2026-10-30
 
 ### Changed
