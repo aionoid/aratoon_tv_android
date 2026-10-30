@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,7 +41,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,12 +95,12 @@ fun SeriesScreen(slug: String, navController: NavHostController) {
     val scope = rememberCoroutineScope()
     val gold = MaterialTheme.colorScheme.primary
 
-    var info by rememberSaveable { mutableStateOf<SeasonInfo?>(null) }
-    var infoError by rememberSaveable { mutableStateOf(false) }
-    var loadKey by rememberSaveable { mutableIntStateOf(0) }
+    var info by remember { mutableStateOf<SeasonInfo?>(null) }
+    var infoError by remember { mutableStateOf(false) }
+    var loadKey by remember { mutableIntStateOf(0) }
 
     // null = season list; non-null = episode list for that season id.
-    var selectedSeason by rememberSaveable { mutableStateOf<Int?>(null) }
+    var selectedSeason by remember { mutableStateOf<Int?>(null) }
     var episodes by remember { mutableStateOf<List<Episode>?>(null) }
     var epLoading by remember { mutableStateOf(false) }
     var epError by remember { mutableStateOf(false) }
@@ -227,6 +227,10 @@ fun SeriesScreen(slug: String, navController: NavHostController) {
             )
         )
     }
+
+    // BACK from the episode list returns to the season list (same as LEFT);
+    // from the season list it bubbles to the nav host to pop the screen.
+    BackHandler(enabled = selectedSeason != null) { backToSeasons() }
 
     val barInsets = systemBarsContentPadding()
     Box(
