@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -127,7 +128,9 @@ fun AraToonsShell(navController: NavHostController) {
             selectTab = { tab -> selectTab(tab) },
             enterContent = { tab -> enterContent(tab) },
             modifier = Modifier
+                .zIndex(1f)
                 .fillMaxWidth()
+                .background(Color.Black)
                 .padding(
                     start = 20.dp,
                     end = 20.dp,
