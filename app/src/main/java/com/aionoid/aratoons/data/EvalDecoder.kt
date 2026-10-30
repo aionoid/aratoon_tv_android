@@ -275,7 +275,7 @@ object EvalDecoder {
         ).find(out)
         if (m1 != null) {
             val basePath = m1.groupValues[1]
-            val quality = m1.groupValues[3]
+            val quality = m1.groupValues[4]
             val playlist = m1.groupValues[5]
             out = out.replace(m1.value, "$basePath$quality/$playlist")
         }

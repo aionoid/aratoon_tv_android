@@ -69,4 +69,9 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.4.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // --- Unit tests (TDD) ---
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("com.google.truth:truth:1.2.0")
 }

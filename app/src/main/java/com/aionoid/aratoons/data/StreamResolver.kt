@@ -26,7 +26,7 @@ import java.util.Locale
  * groups, so master.m3u8 URLs are returned as-is and the player UI offers
  * audio track switching.
  */
-class StreamResolver(private val context: Context, private val http: OkHttpClient) {
+class StreamResolver(private val context: Context?, private val http: OkHttpClient) {
 
     private val logTag = "Resolver"
     private val hwBase = "https://v2.hyperwatching.com"
@@ -373,6 +373,7 @@ class StreamResolver(private val context: Context, private val http: OkHttpClien
 
             // --- WebView fallback: let the server page's own JS find the stream ---
             for (wu in triedWatchUrls.take(3)) {
+                if (context == null) break
                 val stream = webExtractor.extract(context, wu, embedUrl)
                 if (stream != null) {
                     return@withContext StreamResult(stream, headers(mapOf("Referer" to origin(wu))))
@@ -434,7 +435,10 @@ class StreamResolver(private val context: Context, private val http: OkHttpClien
     // HTTP / utility helpers
     // ------------------------------------------------------------------
 
-    private fun origin(url: String): String {
+    /**
+     * Extract the origin (scheme://host/) from a URL (package-private for testing).
+     */
+    fun origin(url: String): String {
         return try {
             val u = java.net.URI(url)
             "${u.scheme}://${u.host}/"
@@ -443,7 +447,10 @@ class StreamResolver(private val context: Context, private val http: OkHttpClien
         }
     }
 
-    private fun queryParam(url: String, key: String): String? {
+    /**
+     * Extract a query parameter from a URL (package-private for testing).
+     */
+    fun queryParam(url: String, key: String): String? {
         val idx = url.indexOf('?')
         if (idx < 0) return null
         for (pair in url.substring(idx + 1).split("&")) {
