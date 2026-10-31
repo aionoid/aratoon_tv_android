@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-10-31
+
+### Added
+
+- **README:** full app description, per‑screen screenshots with captions
+  (Home, Movies, Series, Search, Server selection, Episodes, Player) plus
+  text descriptions of the remaining tabs (History / Recently Watched,
+  Settings, Series detail), and **Docker build instructions** for debug and
+  release (using `mingc/android-build-box`), including the optional TV test
+  emulator (`aratoons_tv` AVD) and real‑TV ADB sideload steps.
+
+### Changed
+
+- Version bumped to **1.0.0** (versionCode 100). Milestone release after the
+  full catalog/search/history/playback work and the README were completed.
+
 ## [0.10.7] - 2026-10-30
 
 ### Changed
