@@ -29,6 +29,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -56,8 +58,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,6 +70,7 @@ import coil.compose.AsyncImage
 import com.aionoid.aratoons.App
 import com.aionoid.aratoons.R
 import com.aionoid.aratoons.data.Episode
+import com.aionoid.aratoons.data.Favorites
 import com.aionoid.aratoons.data.SeasonInfo
 import com.aionoid.aratoons.data.StardimaApi
 import com.aionoid.aratoons.ui.ErrorBox
@@ -95,6 +99,7 @@ import kotlinx.coroutines.launch
 fun SeriesScreen(slug: String, navController: NavHostController) {
     val app = App.instance
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val gold = MaterialTheme.colorScheme.primary
 
     // In RTL the two-step list is mirrored: the "back to seasons" action that
@@ -242,6 +247,17 @@ fun SeriesScreen(slug: String, navController: NavHostController) {
     // from the season list it bubbles to the nav host to pop the screen.
     BackHandler(enabled = selectedSeason != null) { backToSeasons() }
 
+    val favEntry = Favorites.Entry(
+        type = "series",
+        title = infoData.title.ifEmpty { slug },
+        poster = infoData.poster,
+        url = slug
+    )
+    var isFavorite by remember { mutableStateOf(false) }
+    LaunchedEffect(infoData) {
+        isFavorite = Favorites.contains(context, favEntry)
+    }
+
     val barInsets = systemBarsContentPadding()
     Box(
         modifier = Modifier
@@ -294,6 +310,55 @@ fun SeriesScreen(slug: String, navController: NavHostController) {
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+
+                    // FAV button
+                    val starVector = if (isFavorite) {
+                        Icons.Filled.Star
+                    } else {
+                        Icons.Outlined.Star
+                    }
+                    val starColor = if (isFavorite) gold else MaterialTheme.colorScheme.onSurfaceVariant
+                    val favFocus = remember { FocusRequester() }
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(
+                                if (isFavorite) gold.copy(alpha = 0.2f) else Color.Transparent,
+                                RoundedCornerShape(50)
+                            )
+                            .border(
+                                1.dp,
+                                if (isFavorite) gold else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                RoundedCornerShape(50)
+                            )
+                            .padding(12.dp)
+                            .focusRequester(favFocus)
+                            .onKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                                when (event.key) {
+                                    Key.Enter, Key.DirectionDown -> {
+                                        isFavorite = Favorites.toggle(context, favEntry)
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            }
+                            .clickable(interactionSource = null, indication = null) {
+                                isFavorite = Favorites.toggle(context, favEntry)
+                            },
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = starVector,
+                            contentDescription = stringResource(
+                                if (isFavorite) R.string.unfavorite else R.string.favorite
+                            ),
+                            tint = starColor,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
                     Spacer(Modifier.weight(1f))
                     Text(
                         text = "$seasonCount seasons",

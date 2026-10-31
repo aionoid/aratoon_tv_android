@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -54,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.aionoid.aratoons.R
 import com.aionoid.aratoons.ui.screens.CatalogScreen
+import com.aionoid.aratoons.ui.screens.FavoritesScreen
 import com.aionoid.aratoons.ui.screens.HomeScreen
 import com.aionoid.aratoons.ui.screens.RecentlyWatchedScreen
 import com.aionoid.aratoons.ui.screens.SearchScreen
@@ -89,6 +91,7 @@ fun AraToonsShell(navController: NavHostController) {
             TabSpec(R.string.movies, Icons.Filled.Movie),
             TabSpec(R.string.series, Icons.Filled.AutoAwesome),
             TabSpec(R.string.recently_watched, Icons.Filled.History),
+            TabSpec(R.string.favorites, Icons.Filled.Star),
             TabSpec(R.string.search, Icons.Filled.Search),
             TabSpec(R.string.settings, Icons.Filled.Settings),
         )
@@ -160,8 +163,9 @@ fun AraToonsShell(navController: NavHostController) {
                     focusEntry = contentFocusRequests[2]
                 )
                 3 -> RecentlyWatchedScreen(navController, focusEntry = contentFocusRequests[3])
-                4 -> SearchScreen(navController, initialQuery = "", focusEntry = contentFocusRequests[4])
-                5 -> SettingsScreen()
+                4 -> FavoritesScreen(navController, focusEntry = contentFocusRequests[4])
+                5 -> SearchScreen(navController, initialQuery = "", focusEntry = contentFocusRequests[5])
+                6 -> SettingsScreen()
             }
         }
     }

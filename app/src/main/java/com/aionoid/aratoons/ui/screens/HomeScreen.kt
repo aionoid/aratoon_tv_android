@@ -51,10 +51,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import android.content.Context
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.aionoid.aratoons.App
 import com.aionoid.aratoons.R
+import com.aionoid.aratoons.data.Favorites
 import com.aionoid.aratoons.data.RecentlyWatched
 import com.aionoid.aratoons.data.StardimaApi
 import com.aionoid.aratoons.data.VideoItem
@@ -100,8 +102,9 @@ fun HomeScreen(
     var recent by remember { mutableStateOf<List<VideoItem>?>(null) }
     var allMovies by remember { mutableStateOf<List<VideoItem>?>(null) }
     var allSeries by remember { mutableStateOf<List<VideoItem>?>(null) }
+    var favItems by remember { mutableStateOf<List<VideoItem>?>(null) }
     var error by remember { mutableStateOf(false) }
-    var loadKey by remember { mutableStateOf(0) }
+    var loadKey by remember { mutableIntStateOf(0) }
     var heroIndex by rememberSaveable { mutableIntStateOf(0) }
     var focusedCard by remember { mutableStateOf<VideoItem?>(null) }
 
@@ -111,10 +114,13 @@ fun HomeScreen(
 
     LaunchedEffect(loadKey) {
         featured = null; recent = null; allMovies = null; allSeries = null
+        favItems = null
         error = false; heroIndex = 0
         try {
-            // Recently watched comes from prefs — show it while network loads
+            // Recently watched and favourites come from prefs — show them
+            // immediately while the network rails are still loading.
             recent = RecentlyWatched.load(context).toItems()
+            favItems = Favorites.load(context).toVideoItems(context)
             // Network: "الرائج" (Popular) carousel + first movies page +
             // first series page (rails)
             val (pop, moviesPage, seriesPage) = coroutineScope {
@@ -180,6 +186,8 @@ fun HomeScreen(
     val rails = buildList {
         val rec = recent
         if (rec != null && rec.isNotEmpty()) add(stringResource(R.string.recently_watched) to rec)
+        val favs = favItems
+        if (favs != null && favs.isNotEmpty()) add(stringResource(R.string.favorites) to favs)
         val feat = featured
         if (feat != null && feat.isNotEmpty()) add(stringResource(R.string.popular) to feat)
         val mov = allMovies
@@ -190,6 +198,14 @@ fun HomeScreen(
     val railHandlers: List<(VideoItem) -> Unit> = buildList {
         val rec = recent
         if (rec != null && rec.isNotEmpty()) add({ item -> recentOnClick(item) })
+        val favs = favItems
+        if (favs != null && favs.isNotEmpty()) add({ item: VideoItem ->
+            if (item.isSeries) {
+                navController.navigate(Routes.series(item.url))
+            } else {
+                movieOnClick(item)
+            }
+        })
         val feat = featured
         if (feat != null && feat.isNotEmpty()) add({ item: VideoItem ->
             if (item.isSeries) seriesOnClick(item) else movieOnClick(item)
@@ -501,5 +517,22 @@ private fun List<RecentlyWatched.Entry>.toItems(): List<VideoItem> = map { e ->
         year = "",
         description = "",
         quality = ""
+    )
+}
+
+/**
+ * Favourites prefs entries -> VideoItems for the rails.
+ * For movies, [url] is the playUrl; for series, it is the slug.
+ */
+private fun List<Favorites.Entry>.toVideoItems(context: Context): List<VideoItem> = map { e ->
+    VideoItem(
+        id = 0,
+        title = e.title,
+        url = e.url,
+        posterUrl = e.poster,
+        isSeries = e.type == "series",
+        year = e.year,
+        description = e.desc,
+        quality = e.quality
     )
 }

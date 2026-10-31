@@ -71,6 +71,12 @@
     <string name="remove">حذف</string>
     <string name="removed">حُذف من القائمة</string>
 
+    <!-- Favorites -->
+    <string name="favorites">المفضلة</string>
+    <string name="favorite">إضافة إلى المفضلة</string>
+    <string name="unfavorite">إزالة من المفضلة</string>
+    <string name="favorites_empty">لم تُضف أي مفضلة بعد — اضغط على النجمة لإضافة</string>
+
     <!-- Settings -->
     <string name="language">لغة الواجهة</string>
     <string name="language_system">لغة النظام</string>

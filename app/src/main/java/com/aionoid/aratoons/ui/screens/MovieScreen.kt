@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.foundation.clickable
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -24,14 +27,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.aionoid.aratoons.R
+import com.aionoid.aratoons.data.Favorites
 import com.aionoid.aratoons.data.StardimaApi
 import com.aionoid.aratoons.ui.Routes
 import com.aionoid.aratoons.ui.systemBarsContentPadding
@@ -69,7 +83,20 @@ fun MovieScreen(
     navController: NavHostController
 ) {
     val gold = MaterialTheme.colorScheme.primary
+    val context = LocalContext.current
     val watchFocus = remember { FocusRequester() }
+    val favEntry = Favorites.Entry(
+        type = "movie",
+        title = title,
+        poster = poster,
+        url = playUrl,
+        year = year,
+        desc = description,
+        quality = quality
+    )
+    var isFavorite by remember(context, favEntry) {
+        mutableStateOf(Favorites.contains(context, favEntry))
+    }
 
     val barInsets = systemBarsContentPadding()
 
@@ -175,34 +202,83 @@ fun MovieScreen(
                 }
                 Spacer(Modifier.height(32.dp))
 
-                Button(
-                    onClick = {
-                        navController.navigate(Routes.servers(playUrl, title, poster))
-                    },
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .focusRequester(watchFocus),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(14.dp)),
-                    colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        focusedContainerColor = MaterialTheme.colorScheme.primary,
-                        focusedContentColor = MaterialTheme.colorScheme.onPrimary,
-                        pressedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
-                    )
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(22.dp)
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Watch now button
+                    Button(
+                        onClick = {
+                            navController.navigate(Routes.servers(playUrl, title, poster))
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .focusRequester(watchFocus),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(14.dp)),
+                        colors = ButtonDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            focusedContainerColor = MaterialTheme.colorScheme.primary,
+                            focusedContentColor = MaterialTheme.colorScheme.onPrimary,
+                            pressedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
                         )
-                        Text(
-                            text = stringResource(R.string.watch_now),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(22.dp)
                             )
+                            Text(
+                                text = stringResource(R.string.watch_now),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+                    }
+
+                    // FAV button
+                    val starVector = if (isFavorite) {
+                        Icons.Filled.Star
+                    } else {
+                        Icons.Outlined.Star
+                    }
+                    val starColor = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    val favFocus = remember { FocusRequester() }
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(
+                                if (isFavorite) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent,
+                                RoundedCornerShape(50)
+                            )
+                            .border(
+                                1.dp,
+                                if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                RoundedCornerShape(50)
+                            )
+                            .padding(12.dp)
+                            .focusRequester(favFocus)
+                            .onKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                                when (event.key) {
+                                    Key.Enter, Key.DirectionDown -> {
+                                        isFavorite = Favorites.toggle(context, favEntry)
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            }
+                            .clickable(interactionSource = null, indication = null) {
+                                isFavorite = Favorites.toggle(context, favEntry)
+                            },
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = starVector,
+                            contentDescription = stringResource(if (isFavorite) R.string.unfavorite else R.string.favorite),
+                            tint = starColor,
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }

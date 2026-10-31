@@ -71,6 +71,12 @@
     <string name="remove">Remove</string>
     <string name="removed">Removed from list</string>
 
+    <!-- Favorites -->
+    <string name="favorites">Favorites</string>
+    <string name="favorite">Add to favourites</string>
+    <string name="unfavorite">Remove from favourites</string>
+    <string name="favorites_empty">No favourites yet — tap the star to add one</string>
+
     <!-- Settings -->
     <string name="language">Interface language</string>
     <string name="language_system">System default</string>

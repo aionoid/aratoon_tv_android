@@ -34,23 +34,23 @@ a generic "error" page with no embed; the slug-prefixed
 
 3. [x] On the search page: replace the language filter dropdown with the same
        pagination used on the catalog pages (for "movies and series").
-    - Replaced the `PageDropdown` pagination in SearchScreen with the
-      `CatalogPageBar` (glass pill bar with page numbers + prev/next arrows),
-      the same pattern used by CatalogScreen.
-    - Status: DONE — committed.
+   - Replaced the `PageDropdown` pagination in SearchScreen with the
+     `CatalogPageBar` (glass pill bar with page numbers + prev/next arrows), the
+     same pattern used by CatalogScreen.
+   - Status: DONE — committed.
 
 4. [x] Bug: the search results show some episodes, and clicking an episode takes
-    you to a different series, not that episode.
+       you to a different series, not that episode.
    - Root cause: StarDima API returns `is_series: true` for BOTH series detail
      pages and episode pages. The click handler used `item.isSeries` to decide,
-     then extracted the slug with `substringAfterLast("/")` — for an episode
-     URL `/tvshow/{slug}/play/{id}` this gave the numeric episode ID, so
+     then extracted the slug with `substringAfterLast("/")` — for an episode URL
+     `/tvshow/{slug}/play/{id}` this gave the numeric episode ID, so
      SeriesScreen loaded the wrong `/tvshow/{id}`.
-   - Fix: new `VideoItemRouting.isSeriesPage(item)` — true only when
-     `isSeries` AND the URL does NOT contain `/play/`. Applied to the click
-     handlers in SearchScreen and CatalogScreen (3 spots). Episode pages now
-     route to `Routes.servers(...)` (server selection), matching the Kodi
-     addon's behavior (`actionResolve`).
+   - Fix: new `VideoItemRouting.isSeriesPage(item)` — true only when `isSeries`
+     AND the URL does NOT contain `/play/`. Applied to the click handlers in
+     SearchScreen and CatalogScreen (3 spots). Episode pages now route to
+     `Routes.servers(...)` (server selection), matching the Kodi addon's
+     behavior (`actionResolve`).
    - TDD: 5 new unit tests in `VideoItemRoutingTest.kt` (34/34 pass).
    - Status: DONE — committed + release built.
 
@@ -95,3 +95,39 @@ a generic "error" page with no embed; the slug-prefixed
      and bottom edges darken for legibility while the centre stays visible for
      the spotlight/list content.
    - Status: DONE — committed + release built.
+9. [x] add an info page for the Movies and in it add a "watch now" when you
+       click it you go to select server page, as the series has the select
+       season page. but the movies don't have
+   - Added a dedicated `MovieScreen` (movie detail page) that mirrors the series
+     season-selection flow: poster, title, year, description and a quality badge
+     on one screen, with a single primary action — the gold **Watch now** button
+     — which hands off to the server-choose screen.
+   - Applied from every entry point: CatalogScreen (item clicks + Spotlight),
+     SearchScreen, HomeScreen (Movies/Popular rails), and RecentlyWatchedScreen
+     (non-series entries).
+   - New `Routes.movie()` route with URL-encoded parameters (handles Arabic titles
+     and `&`/`=`/`#` in the play URL) + `RoutesTest` (6 cases, TDD).
+   - Status: DONE — committed + release built (v1.1.0).
+10. [ ] feature: add a "FAV" ⭐ to the movie "info page" and series "select
+        season" and add them to top bar button for favorites and add a rail on
+        the home screen for it too. And you can unfav when you click on it
+        again.
+11. [ ] feature: add a watched sign on the movies/episode watched.
+12. [ ] feature: add the continue when you left option to videos so it continue
+        at the time you left.
+13. [x] BUG: the top bar navigation on tv not show the settings button i think
+        its not adaptive to screen width, edge-to-edge.
+   - Root cause: the fixed TabBar row (wordmark + 6 tabs) overflows a 960dp-wide
+     TV (the real MX10 box, 1920x1080 @ 320dpi). With a 128dp minimum tab width
+     the leftmost tab (Settings) is clipped off-screen. Fixed by reducing the TabBar
+     minimum width to 112dp so all 6 tabs fit. Verified on the real TV: all 6 tabs
+     are visible, including the Settings gear, and D-pad LEFT can focus it.
+   - Status: DONE — committed (v1.1.1).
+14. [x] BUG: when switching language to Arabic RTL the right/left controls get
+        switched.
+   - Root cause: in Arabic (RTL) the Compose layout is right-to-left, so the
+     physical D-pad LEFT/RIGHT keys pointed the "wrong" way. Every direction-
+     sensitive D-pad handler (TabBar, ImmersivePreview, ContentRail, SeriesScreen
+     episode-list back) now mirrors its LEFT/RIGHT logic when
+     `LocalLayoutDirection == LayoutDirection.Rtl`.
+   - Status: DONE — committed (v1.1.1).
