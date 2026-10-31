@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-10-31
+
+### Added
+
+- **Movie detail page (task #9):** clicking a movie now opens a dedicated
+  info page (MovieScreen) instead of going straight to the server list —
+  poster, title, year, description and a quality badge on one screen with a
+  single primary action, the gold **Watch now** button, which hands off to
+  the server-choose screen (the same flow the series' play button uses).
+  Applied from every entry point: Movies/Series catalog cards + Spotlight,
+  Search results, the Home Popular/Movies rails, and Recently Watched items.
+- **Routes.movie():** new `movie?play&title&poster&year&desc&quality` route
+  that URL-encodes every parameter, so Arabic titles and `&`/`=`/`#` inside
+  the play URL cannot corrupt the query string.
+- **TDD:** new `RoutesTest` (6 cases) codifying the route contract — path
+  prefix, per-parameter encoding, Arabic round-trip through `Routes.dec`,
+  empty metadata (recently-watched entries carry only title/url/poster), and
+  distinctness from the `servers?` route.
+
+### Changed
+
+- Version bumped to **1.1.0** (versionCode 101).
+
 ## [1.0.0] - 2026-10-31
 
 ### Added
