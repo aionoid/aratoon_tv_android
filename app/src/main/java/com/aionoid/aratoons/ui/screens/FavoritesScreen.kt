@@ -209,8 +209,12 @@ private fun FavoritesCard(
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (event.key) {
-                    Key.Enter, Key.DirectionDown -> {
-                        if (focused) { onRemove() } else { openEntry() }
+                    Key.Enter -> {
+                        openEntry()
+                        true
+                    }
+                    Key.DirectionDown -> {
+                        onRemove()
                         true
                     }
                     else -> false
