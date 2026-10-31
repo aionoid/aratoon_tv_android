@@ -44,6 +44,8 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -311,6 +313,9 @@ private fun ImmersivePreview(
 ) {
     val gold = MaterialTheme.colorScheme.primary
     var blockFocused by remember { mutableStateOf(false) }
+    // In RTL the carousel is mirrored: physical LEFT advances the hero index,
+    // physical RIGHT backs it up (opposite of LTR).
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val scale by animateFloatAsState(
         targetValue = if (blockFocused) 1.01f else 1f,
         animationSpec = spring(dampingRatio = 0.72f)
@@ -354,15 +359,29 @@ private fun ImmersivePreview(
                             true
                         }
                         Key.DirectionLeft -> {
-                            if (index > 0) { onCycleLeft(); true } else {
-                                tabBarEntry.requestFocus()
-                                true
+                            if (rtl) {
+                                if (index < count - 1) { onCycleRight(); true } else {
+                                    tabBarEntry.requestFocus()
+                                    true
+                                }
+                            } else {
+                                if (index > 0) { onCycleLeft(); true } else {
+                                    tabBarEntry.requestFocus()
+                                    true
+                                }
                             }
                         }
                         Key.DirectionRight -> {
-                            if (index < count - 1) { onCycleRight(); true } else {
-                                tabBarEntry.requestFocus()
-                                true
+                            if (rtl) {
+                                if (index > 0) { onCycleLeft(); true } else {
+                                    tabBarEntry.requestFocus()
+                                    true
+                                }
+                            } else {
+                                if (index < count - 1) { onCycleRight(); true } else {
+                                    tabBarEntry.requestFocus()
+                                    true
+                                }
                             }
                         }
                         else -> false

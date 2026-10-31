@@ -88,6 +88,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.TextStyle
@@ -201,6 +203,10 @@ fun ContentRail(
 ) {
     val state = railStates.getOrPut(railIndex) { LazyListState() }
     val scope = rememberCoroutineScope()
+    // In RTL the rail is laid out right-to-left: physical LEFT moves focus to
+    // a higher index and physical RIGHT to a lower one (opposite of LTR); the
+    // rail-edge wrap and "escape to tab bar" swap accordingly.
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = title,
@@ -262,7 +268,17 @@ fun ContentRail(
                             }
                         }
                         when (event.key) {
-                            Key.DirectionLeft -> when {
+                            Key.DirectionLeft -> if (rtl) {
+                                if (index < items.size - 1) {
+                                    focusCard(nodeKey + 1)
+                                    true
+                                } else {
+                                    // RTL leftmost = highest index: wrap to the
+                                    // start of the rail (the right edge).
+                                    focusCard(railIndex * 1000)
+                                    true
+                                }
+                            } else when {
                                 index > 0 -> {
                                     focusCard(nodeKey - 1)
                                     true
@@ -276,7 +292,16 @@ fun ContentRail(
                                     true
                                 }
                             }
-                            Key.DirectionRight -> if (index < items.size - 1) {
+                            Key.DirectionRight -> if (rtl) {
+                                if (index > 0) {
+                                    focusCard(nodeKey - 1)
+                                    true
+                                } else {
+                                    // RTL rightmost = index 0: escape to tab bar.
+                                    navEntry?.requestFocus()
+                                    true
+                                }
+                            } else if (index < items.size - 1) {
                                 focusCard(nodeKey + 1)
                                 true
                             } else {

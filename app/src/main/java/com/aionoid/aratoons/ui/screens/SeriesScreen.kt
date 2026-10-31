@@ -56,6 +56,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -94,6 +96,10 @@ fun SeriesScreen(slug: String, navController: NavHostController) {
     val app = App.instance
     val scope = rememberCoroutineScope()
     val gold = MaterialTheme.colorScheme.primary
+
+    // In RTL the two-step list is mirrored: the "back to seasons" action that
+    // is LEFT in LTR becomes RIGHT (and vice-versa) in RTL.
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     var info by remember { mutableStateOf<SeasonInfo?>(null) }
     var infoError by remember { mutableStateOf(false) }
@@ -433,8 +439,16 @@ fun SeriesScreen(slug: String, navController: NavHostController) {
                                                 Key.DirectionDown -> if (index < n - 1) {
                                                     focusRowIndex(epListState, epFocusMap, index + 1); true
                                                 } else true
-                                                Key.DirectionLeft -> { backToSeasons(); true }
-                                                Key.DirectionRight -> true
+                                                Key.DirectionLeft -> if (rtl) {
+                                                    true
+                                                } else {
+                                                    backToSeasons(); true
+                                                }
+                                                Key.DirectionRight -> if (rtl) {
+                                                    backToSeasons(); true
+                                                } else {
+                                                    true
+                                                }
                                                 else -> false
                                             }
                                         }

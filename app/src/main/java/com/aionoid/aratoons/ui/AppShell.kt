@@ -36,6 +36,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.zIndex
@@ -187,6 +189,11 @@ private fun TabBar(
     modifier: Modifier = Modifier
 ) {
     val gold = MaterialTheme.colorScheme.primary
+    // In RTL (Arabic) the layout is mirrored: the physical LEFT key moves focus
+    // toward higher indices (towards Settings) and RIGHT toward lower indices
+    // (towards Home). Mirror the LEFT/RIGHT handling so the D-pad always matches
+    // the on-screen direction.
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -253,11 +260,19 @@ private fun TabBar(
                             false
                         } else when (event.key) {
                             Key.DirectionLeft -> {
-                                if (index > 0) selectTab(index - 1)
+                                if (rtl) {
+                                    if (index < tabs.size - 1) selectTab(index + 1)
+                                } else {
+                                    if (index > 0) selectTab(index - 1)
+                                }
                                 true
                             }
                             Key.DirectionRight -> {
-                                if (index < tabs.size - 1) selectTab(index + 1)
+                                if (rtl) {
+                                    if (index > 0) selectTab(index - 1)
+                                } else {
+                                    if (index < tabs.size - 1) selectTab(index + 1)
+                                }
                                 true
                             }
                             Key.DirectionDown -> { enterContent(index); true }
@@ -304,7 +319,7 @@ private fun TabItem(
             // Internal padding so the icon and the label sit clear of the pill
             // edge (and its border) — never hugging the edge.
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .widthIn(min = 128.dp)
+            .widthIn(min = 112.dp)
             .scale(scale)
             .clip(shape)
             .background(if (selected) gold else Color.Transparent, shape)
