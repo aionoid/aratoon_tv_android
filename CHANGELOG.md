@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-10-31
+
+### Fixed
+
+- **Arabic RTL D-pad navigation (TV bug #14):** in Arabic/RTL the tab bar and
+  content rails are laid out right-to-left, so physical LEFT/RIGHT keys
+  pointed the "wrong" way. Every direction-sensitive D-pad handler now mirrors
+  its LEFT/RIGHT logic when `LocalLayoutDirection == LayoutDirection.Rtl`:
+  - `AppShell.TabBar` — LEFT/RIGHT tab selection mirrored.
+  - `HomeScreen.ImmersivePreview` — LEFT/RIGHT hero cycling mirrored.
+  - `Components.ContentRail` — LEFT/RIGHT card focus + rail-edge wrap mirrored.
+  - `SeriesScreen` — LEFT/RIGHT "back to seasons" mirrored.
+  Detection uses `LocalLayoutDirection` (Compose's built-in layout direction),
+  so RTL is handled correctly regardless of how the locale is applied.
+
+### Changed
+
+- Version bumped to **1.1.1** (versionCode 102).
+
 ## [1.1.0] - 2026-10-31
 
 ### Added
