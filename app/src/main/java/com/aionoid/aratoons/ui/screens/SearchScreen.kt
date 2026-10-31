@@ -225,7 +225,14 @@ fun SearchScreen(navController: NavHostController, initialQuery: String = "", fo
                         )
                     } else {
                         navController.navigate(
-                            Routes.servers(item.url, item.title, item.posterUrl)
+                            Routes.movie(
+                                item.url,
+                                item.title,
+                                item.posterUrl,
+                                item.year,
+                                item.description,
+                                item.quality
+                            )
                         )
                     }
                 },

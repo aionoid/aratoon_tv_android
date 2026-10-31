@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.aionoid.aratoons.ui.screens.CatalogScreen
+import com.aionoid.aratoons.ui.screens.MovieScreen
 import com.aionoid.aratoons.ui.screens.PlayerScreen
 import com.aionoid.aratoons.ui.screens.RecentlyWatchedScreen
 import com.aionoid.aratoons.ui.screens.SearchScreen
@@ -21,6 +22,7 @@ object Routes {
     const val SERIES = "series?slug={slug}"
     const val SEARCH = "search?query={query?}"
     const val SERVERS = "servers?play={play}&title={title}&poster={poster}"
+    const val MOVIE = "movie?play={play}&title={title}&poster={poster}&year={year}&desc={desc}&quality={quality}"
     const val PLAYER = "player?url={url}&title={title}&poster={poster}&server={server?}"
     const val SETTINGS = "settings"
     const val RECENTLY = "recently"
@@ -29,6 +31,14 @@ object Routes {
         "servers?play=${URLEncoder.encode(play, "UTF-8")}" +
             "&title=${URLEncoder.encode(title, "UTF-8")}" +
             "&poster=${URLEncoder.encode(poster, "UTF-8")}"
+
+    fun movie(play: String, title: String, poster: String, year: String, desc: String, quality: String): String =
+        "movie?play=${URLEncoder.encode(play, "UTF-8")}" +
+            "&title=${URLEncoder.encode(title, "UTF-8")}" +
+            "&poster=${URLEncoder.encode(poster, "UTF-8")}" +
+            "&year=${URLEncoder.encode(year, "UTF-8")}" +
+            "&desc=${URLEncoder.encode(desc, "UTF-8")}" +
+            "&quality=${URLEncoder.encode(quality, "UTF-8")}"
 
     fun catalog(path: String, title: String): String =
         "catalog?path=${URLEncoder.encode(path, "UTF-8")}&title=${URLEncoder.encode(title, "UTF-8")}"
@@ -93,6 +103,17 @@ fun AraToonsNavHost() {
                 onServerSelected = { server ->
                     navController.navigate(Routes.player(play, title, poster, server))
                 }
+            )
+        }
+        composable(Routes.MOVIE) { back ->
+            MovieScreen(
+                playUrl = Routes.dec(back.arguments?.getString("play")),
+                title = Routes.dec(back.arguments?.getString("title")),
+                poster = Routes.dec(back.arguments?.getString("poster")),
+                year = Routes.dec(back.arguments?.getString("year")),
+                description = Routes.dec(back.arguments?.getString("desc")),
+                quality = Routes.dec(back.arguments?.getString("quality")),
+                navController = navController
             )
         }
         composable(Routes.PLAYER) { back ->

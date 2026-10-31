@@ -148,7 +148,16 @@ fun HomeScreen(
     // switching away and back never fights for focus or leaves a stale anchor.
 
     fun movieOnClick(it: VideoItem) {
-        navController.navigate(Routes.servers(it.url, it.title, it.posterUrl))
+        navController.navigate(
+            Routes.movie(
+                it.url,
+                it.title,
+                it.posterUrl,
+                it.year,
+                it.description,
+                it.quality
+            )
+        )
     }
 
     fun seriesOnClick(it: VideoItem) {

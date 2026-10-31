@@ -125,10 +125,21 @@ fun RecentlyWatchedScreen(navController: NavHostController, focusEntry: FocusReq
                 entry = entry,
                 onClick = {
                     when {
-                        entry.url.contains("/tvshow/") ->
-                            navController.navigate(Routes.series(entry.url.substringAfterLast("/")))
+                        entry.url.contains("/tvshow/") && !entry.url.contains("/play/") ->
+                            navController.navigate(
+                                Routes.series(entry.url.substringAfterLast("/"))
+                            )
                         else ->
-                            navController.navigate(Routes.servers(entry.url, entry.title, entry.poster))
+                            navController.navigate(
+                                Routes.movie(
+                                    entry.url,
+                                    entry.title,
+                                    entry.poster,
+                                    "",
+                                    "",
+                                    ""
+                                )
+                            )
                     }
                 },
                 focusRequester = if (entries == list) firstFocus else null

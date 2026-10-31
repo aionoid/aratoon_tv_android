@@ -245,7 +245,14 @@ fun CatalogScreen(
                                         )
                                     } else {
                                         navController.navigate(
-                                            Routes.servers(item.url, item.title, item.posterUrl)
+                                            Routes.movie(
+                                                item.url,
+                                                item.title,
+                                                item.posterUrl,
+                                                item.year,
+                                                item.description,
+                                                item.quality
+                                            )
                                         )
                                     }
                                 },
@@ -279,7 +286,14 @@ fun CatalogScreen(
                                     )
                                 } else {
                                     navController.navigate(
-                                        Routes.servers(preview.url, preview.title, preview.posterUrl)
+                                        Routes.movie(
+                                            preview.url,
+                                            preview.title,
+                                            preview.posterUrl,
+                                            preview.year,
+                                            preview.description,
+                                            preview.quality
+                                        )
                                     )
                                 }
                             }
@@ -385,7 +399,14 @@ fun CatalogScreen(
                                         )
                                     } else {
                                         navController.navigate(
-                                            Routes.servers(item.url, item.title, item.posterUrl)
+                                            Routes.movie(
+                                                item.url,
+                                                item.title,
+                                                item.posterUrl,
+                                                item.year,
+                                                item.description,
+                                                item.quality
+                                            )
                                         )
                                     }
                                 },
