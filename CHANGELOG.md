@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-10-31
+
+### Added
+
+- **Favorites feature (task #10):**
+  - `data/Favorites.kt` — SharedPreferences-backed favourites (max 100, mirrors
+    `RecentlyWatched`). Entry stores type/title/poster/url/year/desc/quality/
+    addedAt; `load`, `contains`, `add`, `remove`, `toggle`.
+  - `FavoritesScreen.kt` — new 7th tab (star icon). Uses `LazyVerticalGrid`
+    matching the Movies/Series grid layout: 168dp adaptive columns, header
+    with item-count badge, empty state, and 168×252 poster cards (title +
+    Movie/Series badge + a focused-only "remove" chip). ENTER navigates to
+    the item; DOWN removes from favourites.
+  - 7th tab (star) in the top tab bar (after History, before Search).
+  - **Home rail**: a "Favorites" rail appears on the home screen immediately
+    after "Recently Watched" (previously it was the last rail).
+  - **FAV button on MovieScreen**: filled/outline star next to the Watch-now
+    button. ENTER / DOWN toggles the favourite.
+  - **FAV button on SeriesScreen**: filled/outline star in the left column
+    below the description. ENTER / DOWN toggles the favourite.
+  - English and Arabic strings for all favourite-related UI.
+
+### Changed
+
+- Version bumped to **1.2.0** (versionCode 103).
+
 ## [1.1.1] - 2026-10-31
 
 ### Fixed

@@ -11,8 +11,8 @@ android {
         applicationId = "com.aionoid.aratoons"
         minSdk = 21
         targetSdk = 34
-        versionCode = 102
-        versionName = "1.1.1"
+        versionCode = 103
+        versionName = "1.2.0"
     }
 
     signingConfigs {

@@ -108,10 +108,24 @@ a generic "error" page with no embed; the slug-prefixed
    - New `Routes.movie()` route with URL-encoded parameters (handles Arabic titles
      and `&`/`=`/`#` in the play URL) + `RoutesTest` (6 cases, TDD).
    - Status: DONE — committed + release built (v1.1.0).
-10. [ ] feature: add a "FAV" ⭐ to the movie "info page" and series "select
+10. [x] feature: add a "FAV" ⭐ to the movie "info page" and series "select
         season" and add them to top bar button for favorites and add a rail on
         the home screen for it too. And you can unfav when you click on it
         again.
+   - New `data/Favorites.kt`: SharedPreferences-backed favourites (max 100,
+     mirrors RecentlyWatched). Entry stores type/title/poster/url/year/desc/
+     quality/addedAt; `load`, `contains`, `add`, `remove`, `toggle`.
+   - `FavoritesScreen.kt` (7th tab, star icon): LazyVerticalGrid matching the
+     Movies/Series grid — 168dp adaptive columns, header with count badge,
+     empty state, 168×252 poster cards with title + Movie/Series badge + a
+     focused-only "remove" chip. ENTER navigates; DOWN removes.
+   - `AppShell.kt`: 7th tab added at index 4 (after History, before Search).
+   - `HomeScreen.kt`: Favorites rail placed immediately after Recently Watched.
+   - `MovieScreen.kt`: FAV star button (filled/outline) next to Watch-now.
+   - `SeriesScreen.kt`: FAV star button in the left column after the
+     description.
+   - EN + AR strings added.
+   - Status: DONE — committed + release built (v1.2.0).
 11. [ ] feature: add a watched sign on the movies/episode watched.
 12. [ ] feature: add the continue when you left option to videos so it continue
         at the time you left.
